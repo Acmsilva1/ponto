@@ -1,0 +1,6 @@
+{
+  "name": "Ponto Digital",
+  "description": "Sistema moderno e intuitivo de registro de ponto digital para colaboradores, com cálculo de horas, histórico de batidas e geolocalização.",
+  "requestFramePermissions": ["geolocation"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
