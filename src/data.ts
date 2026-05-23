@@ -5,8 +5,8 @@ export const INITIAL_EMPLOYEES: Employee[] = [];
 export const INITIAL_TIME_ENTRIES: TimeEntry[] = [];
 
 export function getInitialState() {
-  const storedEntries = localStorage.getItem('ponto_time_entries');
-  const storedEmployees = localStorage.getItem('ponto_employees');
+  const storedEntries = localStorage.getItem('ponto_digital_real_time_entries_v1');
+  const storedEmployees = localStorage.getItem('ponto_digital_real_employees_v1');
 
   let employees = INITIAL_EMPLOYEES;
   if (storedEmployees) {
@@ -16,7 +16,7 @@ export function getInitialState() {
       employees = INITIAL_EMPLOYEES;
     }
   } else {
-    localStorage.setItem('ponto_employees', JSON.stringify(INITIAL_EMPLOYEES));
+    localStorage.setItem('ponto_digital_real_employees_v1', JSON.stringify(INITIAL_EMPLOYEES));
   }
 
   let entries = INITIAL_TIME_ENTRIES;
@@ -27,16 +27,16 @@ export function getInitialState() {
       entries = INITIAL_TIME_ENTRIES;
     }
   } else {
-    localStorage.setItem('ponto_time_entries', JSON.stringify(INITIAL_TIME_ENTRIES));
+    localStorage.setItem('ponto_digital_real_time_entries_v1', JSON.stringify(INITIAL_TIME_ENTRIES));
   }
 
   return { employees, entries };
 }
 
 export function saveEntries(entries: TimeEntry[]) {
-  localStorage.setItem('ponto_time_entries', JSON.stringify(entries));
+  localStorage.setItem('ponto_digital_real_time_entries_v1', JSON.stringify(entries));
 }
 
 export function saveEmployees(employees: Employee[]) {
-  localStorage.setItem('ponto_employees', JSON.stringify(employees));
+  localStorage.setItem('ponto_digital_real_employees_v1', JSON.stringify(employees));
 }
