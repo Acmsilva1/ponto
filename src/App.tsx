@@ -7,7 +7,9 @@ import { TimeCardTable } from './components/TimeCardTable';
 import { getInitialState, saveEntries, saveEmployees } from './data';
 import { calculateDailySummaries } from './utils';
 import { Employee, TimeEntry, TimeEntryType, GeoLocationData } from './types';
-import { AlertCircle, CheckCircle, HelpCircle, FileText, X } from 'lucide-react';
+import { AlertCircle, CheckCircle, HelpCircle, FileText, X, Database } from 'lucide-react';
+import { hasSupabase, getEmployees, getTimeEntries, insertEmployee, insertTimeEntry } from './supabaseService';
+import { testSupabaseConnection } from './supabaseClient';
 
 export default function App() {
   // Load state from localStorage / seed
@@ -15,15 +17,52 @@ export default function App() {
   const [entries, setEntries] = useState<TimeEntry[]>([]);
   const [selectedEmpId, setSelectedEmpId] = useState<string>('');
   
+  // Supabase live status indicators
+  const [supabaseConnected, setSupabaseConnected] = useState<boolean | null>(null);
+
   // Visual alerts/notifications state
   const [notification, setNotification] = useState<{ message: string; type: 'success' | 'info' } | null>(null);
 
   useEffect(() => {
+    // 1. Core local storage startup (immediate load)
     const { employees: initialEmployees, entries: initialEntries } = getInitialState();
     setEmployees(initialEmployees);
     setEntries(initialEntries);
     if (initialEmployees.length > 0) {
       setSelectedEmpId(initialEmployees[0].id);
+    }
+
+    // 2. Validate Supabase connection and pull live data if credentials are setup
+    if (hasSupabase) {
+      testSupabaseConnection().then(async (isValid) => {
+        setSupabaseConnected(isValid);
+        if (isValid) {
+          // Fetch employees
+          const { data: dbWorkers, error: empErr } = await getEmployees();
+          if (!empErr && dbWorkers && dbWorkers.length > 0) {
+            setEmployees(dbWorkers);
+            saveEmployees(dbWorkers); // Backup offline
+
+            // Fetch entries
+            const { data: dbLogs, error: entErr } = await getTimeEntries();
+            if (!entErr && dbLogs) {
+              setEntries(dbLogs);
+              saveEntries(dbLogs); // Backup offline
+            }
+
+            // Sync currently highlighted employee
+            setSelectedEmpId(prev => {
+              const remains = dbWorkers.some(w => w.id === prev);
+              return remains ? prev : dbWorkers[0].id;
+            });
+
+            setNotification({
+              message: 'Dados sicronizados em tempo real com o Supabase!',
+              type: 'success'
+            });
+          }
+        }
+      });
     }
   }, []);
 
@@ -37,7 +76,7 @@ export default function App() {
     }
   }, [notification]);
 
-  const handleAddEmployee = (newWorker: Employee) => {
+  const handleAddEmployee = async (newWorker: Employee) => {
     const updatedWorkers = [...employees, newWorker];
     setEmployees(updatedWorkers);
     saveEmployees(updatedWorkers);
@@ -49,6 +88,17 @@ export default function App() {
       message: `Colaborador "${newWorker.name}" criado com sucesso!`,
       type: 'success'
     });
+
+    // Synergize live to Supabase if active
+    if (hasSupabase) {
+      const success = await insertEmployee(newWorker);
+      if (success) {
+        setNotification({
+          message: `Colaborador "${newWorker.name}" salvo no Supabase!`,
+          type: 'success'
+        });
+      }
+    }
   };
 
   const activeEmployee = employees.find(e => e.id === selectedEmpId) || employees[0];
@@ -111,7 +161,7 @@ export default function App() {
   const todayEntries = getTodayEntries();
 
   // Core PUNCH trigger handler (ClockIn)
-  const handleClockIn = (type: TimeEntryType, justification: string, location?: GeoLocationData) => {
+  const handleClockIn = async (type: TimeEntryType, justification: string, location?: GeoLocationData) => {
     const freshEntry: TimeEntry = {
       id: `entry-${Date.now()}`,
       employeeId: activeEmployee.id,
@@ -142,18 +192,27 @@ export default function App() {
       message: `Ponto de "${typeNames[type]}" registrado com sucesso para ${activeEmployee.name}!`,
       type: 'success'
     });
+
+    // Synergize live to Supabase if active
+    if (hasSupabase) {
+      const success = await insertTimeEntry(freshEntry);
+      if (success) {
+        setNotification({
+          message: `Batida de "${typeNames[type]}" gravada e sincronizada com o Supabase!`,
+          type: 'success'
+        });
+      }
+    }
   };
 
   // Triggered when retroactively adjusting / retroactive entries
-  const handleAddManualEntry = (
+  const handleAddManualEntry = async (
     dateString: string, 
     timeString: string, 
     type: TimeEntryType, 
     justification: string
   ) => {
     // Parse to construct absolute ISO timestamp
-    // standard YYYY-MM-DD and HH:MM
-    // We construct locally to match clock-in hour
     const localDateStr = `${dateString}T${timeString}:00`;
     const mockedDate = new Date(localDateStr);
 
@@ -180,9 +239,18 @@ export default function App() {
       message: `Ponto retroativo gravado para o dia ${dateString.split('-').reverse().join('/')} às ${timeString}!`,
       type: 'success'
     });
+
+    // Synergize live to Supabase if active
+    if (hasSupabase) {
+      const success = await insertTimeEntry(freshEntry);
+      if (success) {
+        setNotification({
+          message: 'Ponto ajustado e gravado no banco de dados do Supabase!',
+          type: 'success'
+        });
+      }
+    }
   };
-
-
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col font-sans antialiased text-gray-900" id="application-container">
@@ -222,14 +290,36 @@ export default function App() {
               Setor de {activeEmployee.department} &bull; Visualize suas métricas de jornada CLT abaixo.
             </p>
           </div>
-          <div className="bg-white px-3 py-1.5 rounded-lg border border-gray-200/50 flex items-center gap-2 shadow-xs">
-            <span className="flex h-2 w-2 relative shrink-0">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-            </span>
-            <span className="text-[11px] font-semibold text-gray-600 font-mono text-xs">
-              Sincronizado: Portaria 671 MTE
-            </span>
+          
+          {/* Dynamic Database Status Badge */}
+          <div className="flex gap-2">
+            {hasSupabase ? (
+              supabaseConnected === true ? (
+                <div className="bg-emerald-50 text-emerald-700 border border-emerald-200 px-3 py-1.5 rounded-lg flex items-center gap-2 shadow-xs" id="subabase-connected-badge">
+                  <Database className="w-3.5 h-3.5 text-emerald-600 animate-pulse" />
+                  <span className="text-[11px] font-bold font-sans">Supabase Conectado</span>
+                </div>
+              ) : supabaseConnected === false ? (
+                <div className="bg-amber-50 text-amber-700 border border-amber-200 px-3 py-1.5 rounded-lg flex items-center gap-2 shadow-xs" id="supabase-incomplete-badge">
+                  <AlertCircle className="w-3.5 h-3.5 text-amber-600" />
+                  <span className="text-[11px] font-bold font-sans">Aguardando Tabelas</span>
+                </div>
+              ) : (
+                <div className="bg-slate-100 text-slate-700 border border-slate-200 px-3 py-1.5 rounded-lg flex items-center gap-2 shadow-xs" id="supabase-connecting-badge">
+                  <span className="w-1.5 h-1.5 rounded-full bg-slate-400 animate-ping" />
+                  <span className="text-[11px] font-bold font-sans">Conectando Supabase...</span>
+                </div>
+              )
+            ) : (
+              <div className="bg-slate-100 text-slate-600 border border-gray-200 px-3 py-1.5 rounded-lg flex items-center gap-2 shadow-xs text-xs" id="local-mode-badge">
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-slate-400"></span>
+                <span className="text-[11px] font-semibold text-gray-600 font-mono">Modo Local/Offline Ativo</span>
+              </div>
+            )}
+
+            <div className="bg-white px-3 py-1.5 rounded-lg border border-gray-200 flex items-center gap-2 shadow-xs">
+              <span className="text-[11px] font-semibold text-gray-600 font-mono text-xs">Portaria 671 MTE</span>
+            </div>
           </div>
         </div>
 
