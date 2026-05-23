@@ -37,14 +37,64 @@ export default function App() {
     }
   }, [notification]);
 
+  const handleAddEmployee = (newWorker: Employee) => {
+    const updatedWorkers = [...employees, newWorker];
+    setEmployees(updatedWorkers);
+    saveEmployees(updatedWorkers);
+    
+    // Auto-focus on new profile to facilitate testing
+    setSelectedEmpId(newWorker.id);
+
+    setNotification({
+      message: `Colaborador "${newWorker.name}" criado com sucesso!`,
+      type: 'success'
+    });
+  };
+
   const activeEmployee = employees.find(e => e.id === selectedEmpId) || employees[0];
 
   if (!activeEmployee) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
-        <div className="text-center">
-          <p className="text-slate-500 font-medium">Buscando banco de dados...</p>
+      <div className="min-h-screen bg-slate-900 flex flex-col font-sans text-gray-100 antialiased" id="onboarding-root">
+        {/* Navbar */}
+        <Navbar />
+
+        {/* Welcome Onboarding Box */}
+        <div className="flex-1 max-w-lg w-full mx-auto px-4 flex flex-col justify-center py-12">
+          {notification && (
+            <div className="mb-4 bg-emerald-600 text-white py-3 px-4 rounded-xl text-center text-xs font-semibold shadow-lg">
+              {notification.message}
+            </div>
+          )}
+          
+          <div className="bg-white text-gray-900 rounded-2xl p-6 md:p-8 shadow-2xl border border-gray-100 flex flex-col gap-6 text-center">
+            <div>
+              <div className="w-16 h-16 bg-indigo-50 rounded-full flex items-center justify-center mx-auto text-indigo-600 mb-4 shadow-sm">
+                <CheckCircle className="w-8 h-8" />
+              </div>
+              <h2 className="text-xl font-bold tracking-tight text-gray-950">Seu Ponto Digital está pronto!</h2>
+              <p className="text-sm text-gray-500 mt-2 leading-relaxed">
+                Tudo configurado com sucesso e limpo para uso real. Registre o primeiro colaborador para iniciar os registros de batidas no sistema.
+              </p>
+            </div>
+
+            <div className="h-px bg-gray-100 w-full" />
+
+            {/* Render the Employee selector specifically focusing on addition form */}
+            <div className="text-left">
+              <EmployeeSelector 
+                employees={employees} 
+                selectedId={selectedEmpId} 
+                onSelect={setSelectedEmpId} 
+                onAddEmployee={handleAddEmployee}
+              />
+            </div>
+          </div>
         </div>
+
+        <footer className="py-6 text-center text-xs text-slate-500">
+          <p>&copy; {new Date().getFullYear()} Ponto Digital. Sem dados de demonstração (Mocks removidos).</p>
+        </footer>
       </div>
     );
   }
@@ -132,19 +182,7 @@ export default function App() {
     });
   };
 
-  const handleAddEmployee = (newWorker: Employee) => {
-    const updatedWorkers = [...employees, newWorker];
-    setEmployees(updatedWorkers);
-    saveEmployees(updatedWorkers);
-    
-    // Auto-focus on new profile to facilitate testing
-    setSelectedEmpId(newWorker.id);
 
-    setNotification({
-      message: `Colaborador "${newWorker.name}" criado com sucesso!`,
-      type: 'success'
-    });
-  };
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col font-sans antialiased text-gray-900" id="application-container">

@@ -10,7 +10,7 @@ interface EmployeeSelectorProps {
 }
 
 export function EmployeeSelector({ employees, selectedId, onSelect, onAddEmployee }: EmployeeSelectorProps) {
-  const [showAddForm, setShowAddForm] = useState(false);
+  const [showAddForm, setShowAddForm] = useState(employees.length === 0);
   const [name, setName] = useState('');
   const [role, setRole] = useState('');
   const [department, setDepartment] = useState('');
@@ -52,20 +52,22 @@ export function EmployeeSelector({ employees, selectedId, onSelect, onAddEmploye
       <div className="flex justify-between items-center mb-5">
         <h3 className="text-sm font-bold text-gray-800 flex items-center gap-2">
           <Users className="w-4.5 h-4.5 text-indigo-500" />
-          Colaborador Ativo
+          {employees.length === 0 ? 'Criar Novo Perfil' : 'Colaborador Ativo'}
         </h3>
-        <button
-          type="button"
-          id="btn-toggle-add-employee"
-          onClick={() => setShowAddForm(!showAddForm)}
-          className="text-xs font-semibold text-indigo-600 hover:text-indigo-800 flex items-center gap-1 py-1 px-2.5 rounded-lg bg-indigo-50/70 hover:bg-indigo-50 transition cursor-pointer"
-        >
-          {showAddForm ? <X className="w-3.5 h-3.5" /> : <Plus className="w-3.5 h-3.5" />}
-          {showAddForm ? 'Cancelar' : 'Novo Perfil'}
-        </button>
+        {employees.length > 0 && (
+          <button
+            type="button"
+            id="btn-toggle-add-employee"
+            onClick={() => setShowAddForm(!showAddForm)}
+            className="text-xs font-semibold text-indigo-600 hover:text-indigo-800 flex items-center gap-1 py-1 px-2.5 rounded-lg bg-indigo-50/70 hover:bg-indigo-50 transition cursor-pointer"
+          >
+            {showAddForm ? <X className="w-3.5 h-3.5" /> : <Plus className="w-3.5 h-3.5" />}
+            {showAddForm ? 'Cancelar' : 'Novo Perfil'}
+          </button>
+        )}
       </div>
 
-      {showAddForm ? (
+      {showAddForm || employees.length === 0 ? (
         <form onSubmit={handleCreate} className="space-y-4 bg-slate-50 p-4 rounded-xl border border-slate-100">
           <h4 className="text-xs font-bold text-slate-800 flex items-center gap-1.5 mb-2">
             <Sparkles className="w-3.5 h-3.5 text-indigo-500" />
@@ -92,19 +94,19 @@ export function EmployeeSelector({ employees, selectedId, onSelect, onAddEmploye
                 required
                 placeholder="Ex: Gerente Geral"
                 value={role}
-                onChange={(e) => setRole(e.value || e.target.value)}
+                onChange={(e) => setRole(e.target.value)}
                 className="w-full text-xs py-2 px-3 rounded-lg border border-gray-200 bg-white focus:outline-none focus:ring-1 focus:ring-indigo-500"
               />
             </div>
             <div>
-              <label className="block text-[10px] font-bold uppercase text-gray-500 mb-1">Setor</label>
+              <label className="block text-[10px] font-bold uppercase text-gray-400">Setor</label>
               <input
                 type="text"
                 id="input-worker-dept"
                 required
                 placeholder="Ex: RH"
                 value={department}
-                onChange={(e) => setDepartment(e.value || e.target.value)}
+                onChange={(e) => setDepartment(e.target.value)}
                 className="w-full text-xs py-2 px-3 rounded-lg border border-gray-200 bg-white focus:outline-none focus:ring-1 focus:ring-indigo-500"
               />
             </div>
@@ -115,7 +117,7 @@ export function EmployeeSelector({ employees, selectedId, onSelect, onAddEmploye
               id="select-worker-hours"
               value={workHours}
               onChange={(e) => setWorkHours(Number(e.target.value))}
-              className="w-full text-xs py-2 px-3 rounded-lg border border-gray-200 bg-white focus:outline-none focus:ring-1 focus:ring-indigo-500"
+              className="w-full text-xs py-2 px-3 rounded-lg border border-gray-200 bg-white focus:outline-none focus:ring-1 focus:ring-indigo-500 cursor-pointer"
             >
               <option value="8">8 Horas Diárias (Padrão CLT)</option>
               <option value="6">6 Horas Diárias (Estágio/Jornada Reduzida)</option>
@@ -125,30 +127,32 @@ export function EmployeeSelector({ employees, selectedId, onSelect, onAddEmploye
           <button
             type="submit"
             id="btn-submit-employee"
-            className="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-2 px-3 rounded-lg text-xs font-semibold shadow-sm transition tracking-wide cursor-pointer"
+            className="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-2.5 px-3 rounded-lg text-xs font-semibold shadow-sm transition tracking-wide cursor-pointer"
           >
-            Cadastrar e Selecionar Colaborador
+            Cadastrar e Começar a Bater Ponto
           </button>
         </form>
       ) : (
         <div className="space-y-4">
           {/* Current selected Profile card */}
-          <div className="flex items-center gap-3 bg-slate-50/70 p-3.5 rounded-xl border border-slate-100">
-            <div className={`w-12 h-12 rounded-full ${selectedEmployee.avatarColor} text-white flex items-center justify-center font-bold text-lg`}>
-              {selectedEmployee.name.charAt(0)}
+          {selectedEmployee && (
+            <div className="flex items-center gap-3 bg-slate-50/70 p-3.5 rounded-xl border border-slate-100">
+              <div className={`w-12 h-12 rounded-full ${selectedEmployee.avatarColor} text-white flex items-center justify-center font-bold text-lg`}>
+                {selectedEmployee.name.charAt(0)}
+              </div>
+              <div className="flex-1 min-w-0">
+                <h4 className="text-sm font-semibold text-gray-900 truncate">{selectedEmployee.name}</h4>
+                <p className="text-xs text-gray-500 truncate flex items-center gap-1 mt-0.5">
+                  <Briefcase className="w-3.5 h-3.5" />
+                  {selectedEmployee.role} &bull; <span className="font-medium text-indigo-600">{selectedEmployee.department}</span>
+                </p>
+                <p className="text-[10px] text-gray-400 font-mono tracking-wide mt-1 flex items-center gap-1">
+                  <Hash className="w-3 h-3" />
+                  Registro: {selectedEmployee.registryId} &bull; Jornada: {selectedEmployee.workHoursPerDay}h
+                </p>
+              </div>
             </div>
-            <div className="flex-1 min-w-0">
-              <h4 className="text-sm font-semibold text-gray-900 truncate">{selectedEmployee.name}</h4>
-              <p className="text-xs text-gray-500 truncate flex items-center gap-1 mt-0.5">
-                <Briefcase className="w-3.5 h-3.5" />
-                {selectedEmployee.role} &bull; <span className="font-medium text-indigo-600">{selectedEmployee.department}</span>
-              </p>
-              <p className="text-[10px] text-gray-400 font-mono tracking-wide mt-1 flex items-center gap-1">
-                <Hash className="w-3 h-3" />
-                Registro: {selectedEmployee.registryId} &bull; Jornada: {selectedEmployee.workHoursPerDay}h
-              </p>
-            </div>
-          </div>
+          )}
 
           {/* Quick List selection */}
           <div>
