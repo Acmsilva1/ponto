@@ -11,12 +11,13 @@ interface ClockWidgetProps {
 const actions: Array<{
   value: TimeEntryType;
   label: string;
+  description: string;
   icon: typeof LogIn;
 }> = [
-  { value: 'entrada', label: 'Entrada', icon: LogIn },
-  { value: 'almoco_saida', label: 'Intervalo', icon: Coffee },
-  { value: 'almoco_retorno', label: 'Retorno', icon: RefreshCcw },
-  { value: 'saida', label: 'Saída', icon: LogOut }
+  { value: 'entrada', label: 'Entrada', description: 'Início da jornada', icon: LogIn },
+  { value: 'almoco_saida', label: 'Início do intervalo', description: 'Saída para pausa', icon: Coffee },
+  { value: 'almoco_retorno', label: 'Retorno do intervalo', description: 'Volta ao posto', icon: RefreshCcw },
+  { value: 'saida', label: 'Saída final', description: 'Encerramento do expediente', icon: LogOut }
 ];
 
 function formatBrasilia(date: Date) {
@@ -24,7 +25,8 @@ function formatBrasilia(date: Date) {
     timeZone: 'America/Sao_Paulo',
     hour: '2-digit',
     minute: '2-digit',
-    second: '2-digit'
+    second: '2-digit',
+    hourCycle: 'h23'
   }).format(date);
 }
 
@@ -73,35 +75,44 @@ export function ClockWidget({ onClock, disabled, dark = true }: ClockWidgetProps
           dark ? 'border-white/10 bg-slate-950/85' : 'border-slate-200 bg-white shadow-sm'
         }`}
       >
-        <div className="border-b border-white/10 bg-gradient-to-r from-indigo-500/15 via-transparent to-cyan-500/10 px-5 py-4">
+        <div className="border-b border-white/10 bg-gradient-to-r from-indigo-500/15 via-transparent to-cyan-500/10 px-5 py-5">
           <div className="flex items-start justify-between gap-4">
-            <div>
-              <p className={`text-[11px] font-semibold uppercase tracking-[0.24em] ${dark ? 'text-indigo-200/80' : 'text-slate-500'}`}>
-                Relógio do sistema
-              </p>
-              <h3 className={`mt-2 text-lg font-bold ${dark ? 'text-white' : 'text-slate-900'}`}>Hora de Brasília</h3>
-              <p className={`mt-1 text-sm ${dark ? 'text-slate-400' : 'text-slate-500'}`}>
-                {formatBrasiliaDate(now)} às {formatBrasilia(now)}
-              </p>
+            <div className="space-y-3">
+              <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.24em] text-slate-300">
+                <span className="h-2 w-2 rounded-full bg-emerald-400" />
+                Relógio oficial
+              </div>
+              <div>
+                <p className={`text-[11px] font-semibold uppercase tracking-[0.24em] ${dark ? 'text-indigo-200/80' : 'text-slate-500'}`}>
+                  Hora de Brasília
+                </p>
+                <div className="mt-2 font-mono text-4xl font-black tracking-[0.24em] text-white md:text-5xl">
+                  {formatBrasilia(now)}
+                </div>
+                <p className={`mt-2 text-sm ${dark ? 'text-slate-400' : 'text-slate-500'}`}>
+                  {formatBrasiliaDate(now)} • atualização em tempo real
+                </p>
+              </div>
             </div>
-            <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-white/10 bg-white/5">
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-white/10 bg-white/5">
               <Clock3 className="h-5 w-5 text-indigo-300" />
             </div>
           </div>
         </div>
 
         <div className="p-5">
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
             {actions.map((action) => {
               const Icon = action.icon;
               const active = selectedType === action.value;
+
               return (
                 <button
                   key={action.value}
                   type="button"
                   disabled={disabled || loading}
                   onClick={() => setSelectedType(action.value)}
-                  className={`group flex aspect-square flex-col items-center justify-center rounded-[1.5rem] border px-3 text-center transition disabled:cursor-not-allowed disabled:opacity-60 ${
+                  className={`group flex flex-col items-center justify-start gap-3 rounded-[1.5rem] border px-3 py-4 text-center transition disabled:cursor-not-allowed disabled:opacity-60 ${
                     active
                       ? dark
                         ? 'border-indigo-400/40 bg-indigo-500/15 shadow-[0_18px_40px_rgba(79,70,229,0.2)]'
@@ -112,7 +123,7 @@ export function ClockWidget({ onClock, disabled, dark = true }: ClockWidgetProps
                   }`}
                 >
                   <span
-                    className={`flex h-12 w-12 items-center justify-center rounded-full border ${
+                    className={`flex h-16 w-16 items-center justify-center rounded-full border ${
                       active
                         ? dark
                           ? 'border-indigo-400/30 bg-indigo-500/20'
@@ -124,20 +135,21 @@ export function ClockWidget({ onClock, disabled, dark = true }: ClockWidgetProps
                   >
                     <Icon className={`h-5 w-5 ${active ? 'text-indigo-200' : dark ? 'text-slate-300' : 'text-slate-600'}`} />
                   </span>
-                  <span className={`mt-3 text-sm font-semibold ${dark ? 'text-white' : 'text-slate-900'}`}>{action.label}</span>
+                  <span className={`text-sm font-semibold ${dark ? 'text-white' : 'text-slate-900'}`}>{action.label}</span>
+                  <span className={`text-[11px] leading-5 ${dark ? 'text-slate-400' : 'text-slate-500'}`}>{action.description}</span>
                 </button>
               );
             })}
           </div>
 
-          <div className="mt-4 rounded-[1.4rem] border border-white/10 bg-white/[0.03] p-4">
+          <div className="mt-5 rounded-[1.4rem] border border-white/10 bg-white/[0.03] p-4">
             <label className={`mb-2 block text-[11px] font-semibold uppercase tracking-[0.18em] ${dark ? 'text-slate-300' : 'text-slate-500'}`}>
-              Justificativa opcional
+              Observação opcional
             </label>
             <textarea
               value={justification}
               onChange={(event) => setJustification(event.target.value)}
-              placeholder="Se precisar, descreva o motivo ou observação da batida."
+              placeholder="Se necessário, descreva o motivo ou a observação da marcação."
               className={`min-h-24 w-full resize-none rounded-2xl border px-4 py-3 text-sm outline-none transition ${
                 dark
                   ? 'border-white/10 bg-slate-950/70 text-slate-100 placeholder:text-slate-500 focus:border-indigo-400'
@@ -152,7 +164,7 @@ export function ClockWidget({ onClock, disabled, dark = true }: ClockWidgetProps
             onClick={() => setConfirmOpen(true)}
             className="mt-4 w-full rounded-[1.25rem] bg-gradient-to-r from-indigo-500 via-violet-500 to-cyan-500 px-4 py-3 text-sm font-bold text-white shadow-[0_18px_40px_rgba(79,70,229,0.35)] transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            Bater ponto
+            Confirmar registro
           </button>
         </div>
       </section>
@@ -162,7 +174,7 @@ export function ClockWidget({ onClock, disabled, dark = true }: ClockWidgetProps
           <div className="w-full max-w-md rounded-[2rem] border border-white/10 bg-slate-950 p-6 shadow-[0_30px_120px_rgba(2,6,23,0.6)]">
             <div className="flex items-start justify-between gap-4">
               <div>
-                <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-indigo-300/80">Confirmar batida</p>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-indigo-300/80">Confirmar marcação</p>
                 <h4 className="mt-2 text-2xl font-black text-white">{selectedAction.label}</h4>
                 <p className="mt-2 text-sm text-slate-400">
                   {formatBrasiliaDate(now)} às {formatBrasilia(now)}
@@ -180,9 +192,9 @@ export function ClockWidget({ onClock, disabled, dark = true }: ClockWidgetProps
             <div className="mt-5 rounded-[1.4rem] border border-white/10 bg-white/[0.03] p-4 text-sm text-slate-300">
               <div className="flex items-center gap-2 text-slate-100">
                 <ShieldCheck className="h-4 w-4 text-emerald-300" />
-                O sistema vai registrar a ação escolhida e enviar para a API.
+                O sistema vai registrar a marcação escolhida e enviar para a API.
               </div>
-              {justification.trim() && <p className="mt-3 text-slate-400">Justificativa: {justification.trim()}</p>}
+              {justification.trim() && <p className="mt-3 text-slate-400">Observação: {justification.trim()}</p>}
             </div>
 
             <div className="mt-6 grid gap-3 sm:grid-cols-2">
@@ -199,7 +211,7 @@ export function ClockWidget({ onClock, disabled, dark = true }: ClockWidgetProps
                 disabled={loading}
                 className="rounded-[1.25rem] bg-gradient-to-r from-indigo-500 via-violet-500 to-cyan-500 px-4 py-3 text-sm font-bold text-white shadow-[0_18px_40px_rgba(79,70,229,0.35)] transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-60"
               >
-                {loading ? 'Enviando...' : 'Confirmar e bater ponto'}
+                {loading ? 'Enviando...' : 'Confirmar e registrar'}
               </button>
             </div>
           </div>

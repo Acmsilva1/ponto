@@ -97,9 +97,7 @@ export function DashboardPage({
             employee={employee}
             timeEntries={collaboratorEntries}
             justifications={collaboratorJustifications}
-            summary={summary}
             onClock={handleClock}
-            onOpenProfile={onOpenProfile}
           />
         )}
       </main>
