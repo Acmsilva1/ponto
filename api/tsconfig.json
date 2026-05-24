@@ -11,11 +11,9 @@
     "esModuleInterop": true,
     "resolveJsonModule": true,
     "forceConsistentCasingInFileNames": true,
-    "noEmit": true,
-    "baseUrl": ".",
-    "paths": {
-      "@shared/*": ["../shared/src/*"]
-    }
+    "noEmit": false,
+    "rootDir": "..",
+    "outDir": "dist"
   },
   "include": ["src/**/*.ts", "../shared/src/**/*.ts"]
 }

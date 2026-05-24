@@ -1,5 +1,5 @@
 import { getSupabaseClient } from '../../lib/supabase.js';
-import type { Justification } from '@shared/contracts';
+import type { Justification } from '../../../../shared/src/contracts.js';
 
 const TABLE = 'justifications';
 

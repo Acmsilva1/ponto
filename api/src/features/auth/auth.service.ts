@@ -1,5 +1,5 @@
 import { randomBytes } from 'node:crypto';
-import type { AuthSession, LoginInput, PasswordRecoveryInput, PasswordRecoveryResponse, RegisterInput, ChangePasswordInput, Employee } from '@shared/contracts';
+import type { AuthSession, LoginInput, PasswordRecoveryInput, PasswordRecoveryResponse, RegisterInput, ChangePasswordInput, Employee } from '../../../../shared/src/contracts.js';
 import { env } from '../../config/env.js';
 import { hashPassword, signSession, verifyPassword } from '../../lib/crypto.js';
 import { createEmployee, ensureMasterAccount, findEmployeeById, findEmployeeByRegistryId, logPasswordResetRequest, updatePassword } from './auth.repository.js';

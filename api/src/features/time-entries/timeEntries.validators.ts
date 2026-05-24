@@ -1,4 +1,4 @@
-import type { TimeEntryType, GeoLocationData } from '@shared/contracts';
+import type { TimeEntryType, GeoLocationData } from '../../../../shared/src/contracts.js';
 
 export interface CreateTimeEntryInput {
   employeeId: string;

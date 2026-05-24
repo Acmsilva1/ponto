@@ -1,4 +1,4 @@
-import type { ChangePasswordInput, LoginInput, PasswordRecoveryInput, RegisterInput } from '@shared/contracts';
+import type { ChangePasswordInput, LoginInput, PasswordRecoveryInput, RegisterInput } from '../../../../shared/src/contracts.js';
 
 export function validateLoginInput(input: unknown): LoginInput {
   const payload = input as Partial<LoginInput>;

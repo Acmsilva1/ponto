@@ -1,4 +1,4 @@
-import type { Employee } from '@shared/contracts';
+import type { Employee } from '../../../../shared/src/contracts.js';
 import { listEmployees } from './employees.repository.js';
 
 function sanitizeEmployee(employee: Employee): Employee {

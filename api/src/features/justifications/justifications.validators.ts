@@ -1,4 +1,4 @@
-import type { JustificationStatus } from '@shared/contracts';
+import type { JustificationStatus } from '../../../../shared/src/contracts.js';
 
 export interface CreateJustificationInput {
   employeeId: string;

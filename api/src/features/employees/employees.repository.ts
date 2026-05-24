@@ -1,5 +1,5 @@
 import { getSupabaseClient } from '../../lib/supabase.js';
-import type { EmployeeWithAuth } from '@shared/contracts';
+import type { EmployeeWithAuth } from '../../../../shared/src/contracts.js';
 
 const TABLE = 'employees';
 

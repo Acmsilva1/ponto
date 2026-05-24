@@ -1,5 +1,5 @@
 import { getSupabaseClient } from '../../lib/supabase.js';
-import type { TimeEntry } from '@shared/contracts';
+import type { TimeEntry } from '../../../../shared/src/contracts.js';
 
 const TABLE = 'time_entries';
 

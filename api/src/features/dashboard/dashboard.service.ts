@@ -1,4 +1,4 @@
-import type { DashboardSummary } from '@shared/contracts';
+import type { DashboardSummary } from '../../../../shared/src/contracts.js';
 import { listEmployees } from '../employees/employees.repository.js';
 import { listJustifications } from '../justifications/justifications.repository.js';
 import { listTimeEntries } from '../time-entries/timeEntries.repository.js';
