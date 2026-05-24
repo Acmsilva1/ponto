@@ -400,6 +400,35 @@ export function ManagerWorkspace({
         </div>
       </section>
 
+      <section className="grid gap-4 rounded-[1.75rem] border border-white/10 bg-slate-950/80 p-5 xl:grid-cols-[1fr_auto] xl:items-center">
+        <div>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-400">Atalhos administrativos</p>
+          <h3 className="mt-2 text-2xl font-black text-white">Gerenciar colaboradores</h3>
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-400">
+            Abra os modais abaixo para cadastrar, consultar, editar ou excluir colaboradores.
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-3">
+          <button
+            type="button"
+            onClick={() => setShowRegisterModal(true)}
+            className="rounded-full bg-gradient-to-r from-indigo-500 via-violet-500 to-cyan-500 px-5 py-3 text-sm font-bold text-white shadow-[0_18px_40px_rgba(79,70,229,0.35)] transition hover:-translate-y-0.5"
+          >
+            Cadastrar colaborador
+          </button>
+          <button
+            type="button"
+            onClick={() => setShowEmployeesModal(true)}
+            className="inline-flex items-center gap-3 rounded-full border border-white/10 bg-white/[0.03] px-5 py-3 text-sm font-bold text-slate-100 transition hover:-translate-y-0.5 hover:bg-white/[0.06]"
+          >
+            <span className="flex h-9 w-9 items-center justify-center rounded-full border border-cyan-400/20 bg-gradient-to-br from-indigo-500/20 to-cyan-500/20">
+              <UsersRound className="h-4 w-4 text-cyan-300" />
+            </span>
+            Ver colaboradores
+          </button>
+        </div>
+      </section>
+
       <div className="grid gap-6">
         <div className="grid gap-4 xl:grid-cols-2">
           <EChartCard title="Volume diário" description="Batidas acumuladas nos últimos 7 dias." option={activityOption} height={320} />
@@ -421,34 +450,6 @@ export function ManagerWorkspace({
           />
         </div>
 
-        <section className="grid gap-4 rounded-[1.75rem] border border-white/10 bg-slate-950/80 p-5 xl:grid-cols-[1fr_auto] xl:items-center">
-          <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-400">Atalhos administrativos</p>
-            <h3 className="mt-2 text-2xl font-black text-white">Gerenciar colaboradores</h3>
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-400">
-              Abra os modais abaixo para cadastrar, consultar, editar ou excluir colaboradores.
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-3">
-            <button
-              type="button"
-              onClick={() => setShowRegisterModal(true)}
-              className="rounded-full bg-gradient-to-r from-indigo-500 via-violet-500 to-cyan-500 px-5 py-3 text-sm font-bold text-white shadow-[0_18px_40px_rgba(79,70,229,0.35)] transition hover:-translate-y-0.5"
-            >
-              Cadastrar colaborador
-            </button>
-            <button
-              type="button"
-              onClick={() => setShowEmployeesModal(true)}
-              className="inline-flex items-center gap-3 rounded-full border border-white/10 bg-white/[0.03] px-5 py-3 text-sm font-bold text-slate-100 transition hover:-translate-y-0.5 hover:bg-white/[0.06]"
-            >
-              <span className="flex h-9 w-9 items-center justify-center rounded-full border border-cyan-400/20 bg-gradient-to-br from-indigo-500/20 to-cyan-500/20">
-                <UsersRound className="h-4 w-4 text-cyan-300" />
-              </span>
-              Ver colaboradores
-            </button>
-          </div>
-        </section>
       </div>
 
       {showRegisterModal && (
