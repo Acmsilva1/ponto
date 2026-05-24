@@ -49,8 +49,6 @@ export function DashboardPage({
   }, [employee.accessRole, employee.id, employees, selectedEmployeeId]);
 
   const collaboratorEntries = timeEntries.filter((entry) => entry.employeeId === employee.id);
-  const collaboratorJustifications = justifications.filter((item) => item.employeeId === employee.id);
-
   async function handleClock(type: TimeEntryType, justification: string) {
     await createTimeEntry({
       employeeId: employee.id,
@@ -94,9 +92,7 @@ export function DashboardPage({
           />
         ) : (
           <CollaboratorWorkspace
-            employee={employee}
             timeEntries={collaboratorEntries}
-            justifications={collaboratorJustifications}
             onClock={handleClock}
           />
         )}
