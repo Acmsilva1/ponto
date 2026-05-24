@@ -5,7 +5,13 @@ import { Employee } from '../types';
 interface LoginScreenProps {
   employees: Employee[];
   onLogin: (employee: Employee, asRole: 'colaborador' | 'gestor') => void;
-  onQuickRegister: (name: string, role: string, department: string, isGestor: boolean) => void;
+  onQuickRegister: (
+    name: string,
+    role: string,
+    department: string,
+    password: string,
+    isGestor: boolean
+  ) => void;
   supabaseConnected: boolean | null;
 }
 
@@ -21,6 +27,7 @@ export function LoginScreen({ employees, onLogin, onQuickRegister, supabaseConne
   const [regName, setRegName] = useState('');
   const [regRole, setRegRole] = useState('');
   const [regDept, setRegDept] = useState('');
+  const [regPassword, setRegPassword] = useState('');
   const [regIsGestor, setRegIsGestor] = useState(false);
 
   const handleLogin = (e: React.FormEvent) => {
@@ -41,7 +48,7 @@ export function LoginScreen({ employees, onLogin, onQuickRegister, supabaseConne
       // Check password
       const storedPassword = emp.password || '1234';
       if (storedPassword !== password) {
-        setErrorMsg('Senha incorreta! Senha padrão sugerida: 1234');
+        setErrorMsg('Senha incorreta. Confirme os dados cadastrados.');
         return;
       }
 
@@ -91,14 +98,15 @@ export function LoginScreen({ employees, onLogin, onQuickRegister, supabaseConne
 
   const handleQuickRegisterSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!regName.trim() || !regRole.trim() || !regDept.trim()) return;
+    if (!regName.trim() || !regRole.trim() || !regDept.trim() || !regPassword.trim()) return;
 
-    onQuickRegister(regName, regRole, regDept, regIsGestor);
+    onQuickRegister(regName, regRole, regDept, regPassword, regIsGestor);
     
     // Reset inputs
     setRegName('');
     setRegRole('');
     setRegDept('');
+    setRegPassword('');
     setIsRegistering(false);
   };
 
@@ -220,7 +228,6 @@ export function LoginScreen({ employees, onLogin, onQuickRegister, supabaseConne
                     <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">
                       Senha de Acesso
                     </label>
-                    <span className="text-[9px] text-slate-500">Padrão: 1234</span>
                   </div>
                   <div className="relative">
                     <input
@@ -345,6 +352,18 @@ export function LoginScreen({ employees, onLogin, onQuickRegister, supabaseConne
                     className="w-full text-xs py-2 px-3 rounded-lg border border-slate-800 bg-slate-950 text-white focus:outline-none focus:ring-1 focus:ring-indigo-500"
                   />
                 </div>
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Senha desejada</label>
+                <input
+                  type="password"
+                  required
+                  placeholder="Defina a senha inicial"
+                  value={regPassword}
+                  onChange={(e) => setRegPassword(e.target.value)}
+                  className="w-full text-xs py-2 px-3 rounded-lg border border-slate-800 bg-slate-950 text-white placeholder-slate-600 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                />
               </div>
 
               <div>

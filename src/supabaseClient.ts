@@ -21,16 +21,36 @@ export const supabase = isSupabaseConfigured
 export async function testSupabaseConnection(): Promise<boolean> {
   if (!supabase) return false;
   try {
-    // Try querying the employees table safely or checking a simple request
-    const { error } = await supabase.from('employees').select('id').limit(1);
-    if (error) {
-      console.warn('Supabase connection warning - table might not exist yet:', error.message);
-      // If error is database table not found, we're still connected, but if it is API key error, we're not.
-      if (error.code === 'PGRST116' || error.message.includes('relation "employees" does not exist')) {
-        return true; // connected to Supabase api, though migrations might be pending
-      }
+    const [employeesResult, timeEntriesResult] = await Promise.all([
+      supabase.from('employees').select('id').limit(1),
+      supabase.from('time_entries').select('id').limit(1)
+    ]);
+
+    const missingEmployeesTable =
+      !!employeesResult.error &&
+      (employeesResult.error.code === 'PGRST116' ||
+        employeesResult.error.message.includes('relation "employees" does not exist'));
+
+    const missingTimeEntriesTable =
+      !!timeEntriesResult.error &&
+      (timeEntriesResult.error.code === 'PGRST116' ||
+        timeEntriesResult.error.message.includes('relation "time_entries" does not exist'));
+
+    if (missingEmployeesTable || missingTimeEntriesTable) {
+      console.warn('Supabase connected, but one or more tables are missing.');
       return false;
     }
+
+    if (employeesResult.error) {
+      console.error('Supabase connection error (employees):', employeesResult.error);
+      return false;
+    }
+
+    if (timeEntriesResult.error) {
+      console.error('Supabase connection error (time_entries):', timeEntriesResult.error);
+      return false;
+    }
+
     return true;
   } catch (err) {
     console.error('Supabase connection error:', err);

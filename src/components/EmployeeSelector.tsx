@@ -14,17 +14,24 @@ export function EmployeeSelector({ employees, selectedId, onSelect, onAddEmploye
   const [name, setName] = useState('');
   const [role, setRole] = useState('');
   const [department, setDepartment] = useState('');
+  const [password, setPassword] = useState('');
   const [workHours, setWorkHours] = useState(8);
 
-  const selectedEmployee = employees.find(e => e.id === selectedId) || employees[0];
+  const selectedEmployee = employees.find((e) => e.id === selectedId) || employees[0];
 
   const handleCreate = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim() || !role.trim() || !department.trim()) return;
+    if (!name.trim() || !role.trim() || !department.trim() || !password.trim()) return;
 
     const randomColors = [
-      'bg-indigo-600', 'bg-emerald-600', 'bg-amber-600', 'bg-rose-500', 
-      'bg-sky-600', 'bg-purple-600', 'bg-pink-600', 'bg-teal-600'
+      'bg-indigo-600',
+      'bg-emerald-600',
+      'bg-amber-600',
+      'bg-rose-500',
+      'bg-sky-600',
+      'bg-purple-600',
+      'bg-pink-600',
+      'bg-teal-600'
     ];
     const avatarColor = randomColors[Math.floor(Math.random() * randomColors.length)];
     const registryId = `REG-${Math.floor(10000 + Math.random() * 90000)}`;
@@ -36,13 +43,15 @@ export function EmployeeSelector({ employees, selectedId, onSelect, onAddEmploye
       department: department.trim(),
       workHoursPerDay: Number(workHours),
       avatarColor,
-      registryId
+      registryId,
+      password: password.trim()
     };
 
     onAddEmployee(newWorker);
     setName('');
     setRole('');
     setDepartment('');
+    setPassword('');
     setWorkHours(8);
     setShowAddForm(false);
   };
@@ -112,16 +121,28 @@ export function EmployeeSelector({ employees, selectedId, onSelect, onAddEmploye
             </div>
           </div>
           <div>
-            <label className="block text-[10px] font-bold uppercase text-gray-500 mb-1">Jornada Diária (Horas)</label>
+            <label className="block text-[10px] font-bold uppercase text-gray-500 mb-1">Senha desejada</label>
+            <input
+              type="password"
+              id="input-worker-password"
+              required
+              placeholder="Defina a senha inicial"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="w-full text-xs py-2 px-3 rounded-lg border border-gray-200 bg-white focus:outline-none focus:ring-1 focus:ring-indigo-500"
+            />
+          </div>
+          <div>
+            <label className="block text-[10px] font-bold uppercase text-gray-500 mb-1">Jornada Diaria (Horas)</label>
             <select
               id="select-worker-hours"
               value={workHours}
               onChange={(e) => setWorkHours(Number(e.target.value))}
               className="w-full text-xs py-2 px-3 rounded-lg border border-gray-200 bg-white focus:outline-none focus:ring-1 focus:ring-indigo-500 cursor-pointer"
             >
-              <option value="8">8 Horas Diárias (Padrão CLT)</option>
-              <option value="6">6 Horas Diárias (Estágio/Jornada Reduzida)</option>
-              <option value="4">4 Horas Diárias (Meio período)</option>
+              <option value="8">8 Horas Diarias (Padrao CLT)</option>
+              <option value="6">6 Horas Diarias (Estagio/Jornada Reduzida)</option>
+              <option value="4">4 Horas Diarias (Meio periodo)</option>
             </select>
           </div>
           <button
@@ -129,12 +150,11 @@ export function EmployeeSelector({ employees, selectedId, onSelect, onAddEmploye
             id="btn-submit-employee"
             className="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-2.5 px-3 rounded-lg text-xs font-semibold shadow-sm transition tracking-wide cursor-pointer"
           >
-            Cadastrar e Começar a Bater Ponto
+            Cadastrar e Comecar a Bater Ponto
           </button>
         </form>
       ) : (
         <div className="space-y-4">
-          {/* Current selected Profile card */}
           {selectedEmployee && (
             <div className="flex items-center gap-3 bg-slate-50/70 p-3.5 rounded-xl border border-slate-100">
               <div className={`w-12 h-12 rounded-full ${selectedEmployee.avatarColor} text-white flex items-center justify-center font-bold text-lg`}>
@@ -154,7 +174,6 @@ export function EmployeeSelector({ employees, selectedId, onSelect, onAddEmploye
             </div>
           )}
 
-          {/* Quick List selection */}
           <div>
             <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">
               Escolher Outro Colaborador
@@ -169,8 +188,8 @@ export function EmployeeSelector({ employees, selectedId, onSelect, onAddEmploye
                     type="button"
                     onClick={() => onSelect(worker.id)}
                     className={`w-full text-left py-2 px-3 rounded-lg text-xs flex items-center justify-between transition cursor-pointer ${
-                      isActive 
-                        ? 'bg-indigo-50 border border-indigo-200 text-indigo-700 font-semibold' 
+                      isActive
+                        ? 'bg-indigo-50 border border-indigo-200 text-indigo-700 font-semibold'
                         : 'bg-white hover:bg-slate-50 border border-transparent text-gray-600'
                     }`}
                   >

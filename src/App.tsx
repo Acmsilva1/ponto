@@ -109,7 +109,13 @@ export default function App() {
     });
   };
 
-  const handleQuickRegister = async (name: string, role: string, department: string, isGestor: boolean) => {
+  const handleQuickRegister = async (
+    name: string,
+    role: string,
+    department: string,
+    password: string,
+    isGestor: boolean
+  ) => {
     const randomColors = [
       'bg-indigo-600', 'bg-emerald-600', 'bg-amber-600', 'bg-rose-500', 
       'bg-sky-600', 'bg-purple-600', 'bg-pink-600', 'bg-teal-600'
@@ -125,7 +131,7 @@ export default function App() {
       workHoursPerDay: 8,
       avatarColor,
       registryId,
-      password: '1234', // default password
+      password: password.trim(),
       accessRole: isGestor ? 'gestor' : 'colaborador'
     };
 
@@ -135,7 +141,7 @@ export default function App() {
     setSelectedEmpId(newWorker.id);
 
     setNotification({
-      message: `Perfil "${name}" criado! Acesso ID: ${registryId} e senha: "1234".`,
+      message: `Perfil "${name}" criado! Acesso ID: ${registryId}.`,
       type: 'success'
     });
 
