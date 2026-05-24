@@ -1,5 +1,5 @@
 import { Eye, EyeOff, Fingerprint, ShieldCheck } from 'lucide-react';
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import type { Employee } from '@shared/contracts';
 import { login, recoverPassword } from '../services/authService.js';
 
@@ -16,6 +16,13 @@ export function LoginPage({ onLogin, apiStatus }: LoginPageProps) {
   const [message, setMessage] = useState('');
   const [busy, setBusy] = useState(false);
   const [recoveryBusy, setRecoveryBusy] = useState(false);
+
+  useEffect(() => {
+    setRegistryId('');
+    setPassword('');
+    setShowPassword(false);
+    setMessage('');
+  }, [tab]);
 
   async function submitLogin(event: FormEvent) {
     event.preventDefault();
