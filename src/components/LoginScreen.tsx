@@ -121,22 +121,21 @@ export function LoginScreen({ employees, onLogin, onQuickRegister, supabaseConne
             </div>
             <div>
               <h1 className="text-sm font-bold tracking-tight text-white font-sans">Ponto Digital</h1>
-              <p className="text-[9px] text-indigo-400 font-bold uppercase tracking-widest leading-none mt-0.5">MTE Portaria 671</p>
             </div>
           </div>
           {/* Supabase Link status */}
           <div>
             {supabaseConnected === true ? (
               <span className="text-[10px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 py-1 rounded-md font-medium">
-                Nuvem Ativa (Supabase)
+                Supabase Ativo
               </span>
             ) : supabaseConnected === false ? (
               <span className="text-[10px] bg-amber-500/10 text-amber-400 border border-amber-500/20 px-2 py-1 rounded-md font-medium">
-                Tabelas Pendentes
+                Supabase Pendente
               </span>
             ) : (
               <span className="text-[10px] bg-slate-800 text-slate-400 px-2 py-1 rounded-md font-medium">
-                Banco Local Ativo
+                Conectando ao Supabase
               </span>
             )}
           </div>
@@ -264,35 +263,11 @@ export function LoginScreen({ employees, onLogin, onQuickRegister, supabaseConne
               <div className="mt-8 pt-6 border-t border-slate-800/80 text-center flex flex-col gap-3">
                 <button
                   onClick={() => setIsRegistering(true)}
-                  className="text-xs text-indigo-400 hover:text-indigo-300 font-medium inline-flex items-center justify-center gap-1.5 cursor-pointer"
+                  className="w-full inline-flex items-center justify-center gap-2 rounded-2xl bg-indigo-500/15 text-indigo-300 hover:text-white hover:bg-indigo-500/25 border border-indigo-500/30 px-4 py-3.5 text-sm font-semibold shadow-[0_0_0_1px_rgba(99,102,241,0.06)] transition cursor-pointer"
                 >
                   <UserPlus className="w-4 h-4" />
                   Cadastrar Novo Colaborador ou Gestor
                 </button>
-
-                {employees.length > 0 && (
-                  <div>
-                    <p className="text-[10px] font-bold uppercase text-slate-500 tracking-wider mb-2">
-                      Perfis Registrados no Banco ({employees.length})
-                    </p>
-                    <div className="flex flex-wrap gap-1.5 justify-center max-h-24 overflow-y-auto p-1 bg-slate-950/40 rounded-lg">
-                      {employees.map((e) => (
-                        <div 
-                          key={e.id} 
-                          onClick={() => {
-                            setRegistryId(e.registryId);
-                            setPassword(e.password || '1234');
-                            setActiveTab(e.accessRole === 'gestor' ? 'gestor' : 'colaborador');
-                          }}
-                          className="text-[9px] bg-slate-800 hover:bg-indigo-950 hover:text-indigo-200 border border-slate-700 hover:border-indigo-800 text-slate-300 py-1 px-2 rounded-md font-mono cursor-pointer transition text-ellipsis truncate max-w-[130px]"
-                          title={`${e.name} (${e.accessRole === 'gestor' ? 'Gestor' : 'Comum'})`}
-                        >
-                          {e.name.split(' ')[0]} ({e.registryId})
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
               </div>
             </div>
           </div>
@@ -391,8 +366,7 @@ export function LoginScreen({ employees, onLogin, onQuickRegister, supabaseConne
 
       {/* Bottom Footer legal */}
       <footer className="py-6 text-center text-slate-600 text-[10px] border-t border-slate-900 bg-slate-950/30">
-        <p>&copy; {new Date().getFullYear()} Ponto Digital. CLT Homologado de acordo com a Portaria 671 MTE.</p>
-        <p className="mt-0.5">Suporta autentico local remota segura e geolocalização por IP.</p>
+        <p>&copy; {new Date().getFullYear()} Ponto Digital.</p>
       </footer>
     </div>
   );

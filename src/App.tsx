@@ -5,7 +5,6 @@ import { EmployeeSelector } from './components/EmployeeSelector';
 import { DashboardStats } from './components/DashboardStats';
 import { TimeCardTable } from './components/TimeCardTable';
 import { LoginScreen } from './components/LoginScreen';
-import { getInitialState, saveEntries, saveEmployees } from './data';
 import { calculateDailySummaries } from './utils';
 import { Employee, TimeEntry, TimeEntryType, GeoLocationData } from './types';
 import { AlertCircle, CheckCircle, Database } from 'lucide-react';
@@ -13,7 +12,6 @@ import { hasSupabase, getEmployees, getTimeEntries, insertEmployee, insertTimeEn
 import { testSupabaseConnection } from './supabaseClient';
 
 export default function App() {
-  // Load state from localStorage / seed
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [entries, setEntries] = useState<TimeEntry[]>([]);
   const [selectedEmpId, setSelectedEmpId] = useState<string>('');
@@ -29,46 +27,26 @@ export default function App() {
   const [notification, setNotification] = useState<{ message: string; type: 'success' | 'info' } | null>(null);
 
   useEffect(() => {
-    // 1. Core local storage startup (immediate load)
-    const { employees: initialEmployees, entries: initialEntries } = getInitialState();
-    setEmployees(initialEmployees);
-    setEntries(initialEntries);
-    if (initialEmployees.length > 0) {
-      setSelectedEmpId(initialEmployees[0].id);
-    }
+    if (!hasSupabase) return;
 
-    // 2. Validate Supabase connection and pull live data if credentials are setup
-    if (hasSupabase) {
-      testSupabaseConnection().then(async (isValid) => {
-        setSupabaseConnected(isValid);
-        if (isValid) {
-          // Fetch employees
-          const { data: dbWorkers, error: empErr } = await getEmployees();
-          if (!empErr && dbWorkers && dbWorkers.length > 0) {
-            setEmployees(dbWorkers);
-            saveEmployees(dbWorkers); // Backup offline
+    testSupabaseConnection().then(async (isValid) => {
+      setSupabaseConnected(isValid);
+      if (!isValid) return;
 
-            // Fetch entries
-            const { data: dbLogs, error: entErr } = await getTimeEntries();
-            if (!entErr && dbLogs) {
-              setEntries(dbLogs);
-              saveEntries(dbLogs); // Backup offline
-            }
+      const { data: dbWorkers } = await getEmployees();
+      const { data: dbLogs } = await getTimeEntries();
 
-            // Sync currently highlighted employee
-            setSelectedEmpId(prev => {
-              const remains = dbWorkers.some(w => w.id === prev);
-              return remains ? prev : dbWorkers[0].id;
-            });
+      setEmployees(dbWorkers || []);
+      setEntries(dbLogs || []);
+      setSelectedEmpId(dbWorkers?.[0]?.id || '');
 
-            setNotification({
-              message: 'Dados sincronizados em tempo real com o Supabase!',
-              type: 'success'
-            });
-          }
-        }
+      setNotification({
+        message: dbWorkers && dbWorkers.length > 0
+          ? 'Dados sincronizados em tempo real com o Supabase!'
+          : 'Banco Supabase conectado e sem cadastros iniciais.',
+        type: 'success'
       });
-    }
+    });
   }, []);
 
   // Timer to clear toast notification automatically
@@ -137,7 +115,6 @@ export default function App() {
 
     const updatedWorkers = [...employees, newWorker];
     setEmployees(updatedWorkers);
-    saveEmployees(updatedWorkers);
     setSelectedEmpId(newWorker.id);
 
     setNotification({
@@ -159,7 +136,6 @@ export default function App() {
   const handleAddEmployee = async (newWorker: Employee) => {
     const updatedWorkers = [...employees, newWorker];
     setEmployees(updatedWorkers);
-    saveEmployees(updatedWorkers);
     setSelectedEmpId(newWorker.id);
 
     setNotification({
@@ -228,7 +204,6 @@ export default function App() {
 
     const updatedEntries = [freshEntry, ...entries];
     setEntries(updatedEntries);
-    saveEntries(updatedEntries);
 
     const typeNames: Record<TimeEntryType, string> = {
       entrada: 'Entrada Inicial',
@@ -282,7 +257,6 @@ export default function App() {
 
     const updatedEntries = [freshEntry, ...entries];
     setEntries(updatedEntries);
-    saveEntries(updatedEntries);
 
     setNotification({
       message: `Ponto retroativo gravado para o dia ${dateString.split('-').reverse().join('/')} às ${timeString}!`,
@@ -330,7 +304,7 @@ export default function App() {
             </h2>
             <p className="text-xs text-gray-500 mt-0.5">
               {activeRole === 'gestor' 
-                ? 'Monitore os cartões de ponto, auditorias de GPS e métricas consolidadas CLT.'
+                ? 'Monitore os cartões de ponto, auditorias de GPS e métricas consolidadas.'
                 : `Setor de ${activeEmployee?.department} • Visualize e bata seu ponto com segurança.`}
             </p>
           </div>
@@ -357,7 +331,7 @@ export default function App() {
             )}
             
             <div className="bg-white px-3 py-1.5 rounded-lg border border-gray-200 flex items-center gap-2 shadow-xs">
-              <span className="text-[11px] font-semibold text-gray-500 font-mono text-xs">Portaria 671 MTE</span>
+              <span className="text-[11px] font-semibold text-gray-500 font-mono text-xs">Sistema Online</span>
             </div>
           </div>
         </div>
@@ -427,8 +401,7 @@ export default function App() {
 
       {/* Dynamic Legal Footer */}
       <footer className="bg-white border-t border-gray-200 py-6 mt-12 text-center text-xs text-gray-400">
-        <p>&copy; {new Date().getFullYear()} Ponto Digital. Desenvolvido em conformidade com as diretrizes do Ministério do Trabalho e Emprego (MTE) brasileiro.</p>
-        <p className="mt-1 text-[10px]">Utiliza autenticação baseada em criptografia local, backup em nuvem Supabase e auditoria de coordenadas GPS.</p>
+        <p>&copy; {new Date().getFullYear()} Ponto Digital.</p>
       </footer>
     </div>
   );
