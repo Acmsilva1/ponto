@@ -48,12 +48,26 @@ export default function App() {
       try {
         await apiRequest('/health');
         setApiStatus('connected');
+      } catch {
+        setApiStatus('error');
+        return;
+      }
 
+      try {
         const current = await me();
         setCurrentEmployee(current.employee);
         setScreen(current.employee.mustChangePassword ? 'profile' : 'dashboard');
         await refreshData(current.employee.accessRole);
-      } catch {
+      } catch (error) {
+        const message = error instanceof Error ? error.message : '';
+        if (
+          message.includes('Autenticação obrigatória') ||
+          message.includes('Sessão inválida') ||
+          message.includes('Usuário não encontrado')
+        ) {
+          setCurrentEmployee(null);
+          return;
+        }
         setApiStatus('error');
       }
     }
