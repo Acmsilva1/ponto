@@ -1,4 +1,12 @@
-import type { AuthSession, ChangePasswordInput, LoginInput, PasswordRecoveryInput, PasswordRecoveryResponse, RegisterInput } from '@shared/contracts';
+import type {
+  AuthSession,
+  ChangePasswordInput,
+  LoginInput,
+  ManagerRegisterInput,
+  PasswordRecoveryInput,
+  PasswordRecoveryResponse,
+  RegisterInput
+} from '@shared/contracts';
 import { apiRequest } from '../../../lib/apiClient.js';
 
 export async function login(input: LoginInput) {
@@ -15,7 +23,7 @@ export async function register(input: RegisterInput) {
   });
 }
 
-export async function registerCollaboratorByManager(input: RegisterInput) {
+export async function registerCollaboratorByManager(input: ManagerRegisterInput) {
   return apiRequest<{ employee: AuthSession['employee'] }>('/auth/register-collaborator', {
     method: 'POST',
     body: JSON.stringify(input)

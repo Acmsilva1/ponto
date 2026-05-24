@@ -1,4 +1,10 @@
-import type { ChangePasswordInput, LoginInput, PasswordRecoveryInput, RegisterInput } from '../../../../shared/src/contracts.js';
+import type {
+  ChangePasswordInput,
+  LoginInput,
+  ManagerRegisterInput,
+  PasswordRecoveryInput,
+  RegisterInput
+} from '../../../../shared/src/contracts.js';
 
 export function validateLoginInput(input: unknown): LoginInput {
   const payload = input as Partial<LoginInput>;
@@ -11,13 +17,25 @@ export function validateLoginInput(input: unknown): LoginInput {
 export function validateRegisterInput(input: unknown): RegisterInput {
   const payload = input as Partial<RegisterInput>;
   if (!payload.name || !payload.role || !payload.department || !payload.password) {
-    throw new Error('Nome, cargo, setor e senha são obrigatórios.');
+    throw new Error('Nome, função, setor e senha são obrigatórios.');
   }
   return {
     name: String(payload.name).trim(),
     role: String(payload.role).trim(),
     department: String(payload.department).trim(),
     password: String(payload.password)
+  };
+}
+
+export function validateManagerRegisterInput(input: unknown): ManagerRegisterInput {
+  const payload = input as Partial<ManagerRegisterInput>;
+  if (!payload.name || !payload.role || !payload.registryId) {
+    throw new Error('Nome, função e matrícula são obrigatórios.');
+  }
+  return {
+    name: String(payload.name).trim(),
+    role: String(payload.role).trim(),
+    registryId: String(payload.registryId).trim().toUpperCase()
   };
 }
 

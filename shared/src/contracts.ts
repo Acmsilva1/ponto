@@ -68,6 +68,12 @@ export interface RegisterInput {
   password: string;
 }
 
+export interface ManagerRegisterInput {
+  name: string;
+  role: string;
+  registryId: string;
+}
+
 export interface ChangePasswordInput {
   currentPassword: string;
   newPassword: string;

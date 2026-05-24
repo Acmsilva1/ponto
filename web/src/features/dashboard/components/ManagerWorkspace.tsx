@@ -1,10 +1,10 @@
 import { useMemo, useState, type FormEvent } from 'react';
 import type { EChartsOption } from 'echarts';
 import type { DashboardSummary, Employee, Justification, TimeEntry } from '@shared/contracts';
+import { registerCollaboratorByManager } from '../../auth/services/authService.js';
 import { EmployeeSelector } from '../../employees/components/EmployeeSelector.js';
 import { TimeCardTable } from '../../time-entries/components/TimeCardTable.js';
 import { EChartCard } from './EChartCard.js';
-import { registerCollaboratorByManager } from '../../auth/services/authService.js';
 
 interface ManagerWorkspaceProps {
   employee: Employee;
@@ -37,8 +37,7 @@ export function ManagerWorkspace({
 }: ManagerWorkspaceProps) {
   const [newName, setNewName] = useState('');
   const [newRole, setNewRole] = useState('');
-  const [newDepartment, setNewDepartment] = useState('');
-  const [newPassword, setNewPassword] = useState('');
+  const [newRegistryId, setNewRegistryId] = useState('');
   const [registerBusy, setRegisterBusy] = useState(false);
   const [registerFeedback, setRegisterFeedback] = useState('');
 
@@ -203,16 +202,14 @@ export function ManagerWorkspace({
       const result = await registerCollaboratorByManager({
         name: newName.trim(),
         role: newRole.trim(),
-        department: newDepartment.trim(),
-        password: newPassword
+        registryId: newRegistryId.trim()
       });
 
       setNewName('');
       setNewRole('');
-      setNewDepartment('');
-      setNewPassword('');
+      setNewRegistryId('');
       await onRefresh();
-      setRegisterFeedback(`Colaborador ${result.employee.name} cadastrado com sucesso. Registro: ${result.employee.registryId}.`);
+      setRegisterFeedback(`Colaborador ${result.employee.name} cadastrado com sucesso. Matrícula: ${result.employee.registryId}.`);
     } catch (error) {
       setRegisterFeedback(error instanceof Error ? error.message : 'Falha ao cadastrar colaborador.');
     } finally {
@@ -258,7 +255,7 @@ export function ManagerWorkspace({
             <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-indigo-100/80">Cadastro administrativo</p>
             <h3 className="mt-2 text-2xl font-black text-white">Novo colaborador</h3>
             <p className="mt-2 text-sm leading-6 text-indigo-50/80">
-              Cadastre pessoas para registrar ponto. O gestor é o único perfil com essa permissão.
+              Cadastre pessoas para registrar ponto. A senha padrão é <span className="font-bold text-white">12345</span> e o sistema exigirá troca no primeiro acesso.
             </p>
 
             <form onSubmit={handleRegisterCollaborator} className="mt-5 space-y-3">
@@ -271,20 +268,13 @@ export function ManagerWorkspace({
               <input
                 value={newRole}
                 onChange={(e) => setNewRole(e.target.value)}
-                placeholder="Cargo"
+                placeholder="Função"
                 className="w-full rounded-[1.25rem] border border-white/10 bg-slate-950/70 px-4 py-3 text-sm text-slate-100 outline-none transition placeholder:text-slate-500 focus:border-indigo-400"
               />
               <input
-                value={newDepartment}
-                onChange={(e) => setNewDepartment(e.target.value)}
-                placeholder="Setor"
-                className="w-full rounded-[1.25rem] border border-white/10 bg-slate-950/70 px-4 py-3 text-sm text-slate-100 outline-none transition placeholder:text-slate-500 focus:border-indigo-400"
-              />
-              <input
-                type="password"
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-                placeholder="Senha desejada"
+                value={newRegistryId}
+                onChange={(e) => setNewRegistryId(e.target.value)}
+                placeholder="Matrícula"
                 className="w-full rounded-[1.25rem] border border-white/10 bg-slate-950/70 px-4 py-3 text-sm text-slate-100 outline-none transition placeholder:text-slate-500 focus:border-indigo-400"
               />
               <button

@@ -1,5 +1,14 @@
 import { randomBytes } from 'node:crypto';
-import type { AuthSession, LoginInput, PasswordRecoveryInput, PasswordRecoveryResponse, RegisterInput, ChangePasswordInput, Employee } from '../../../../shared/src/contracts.js';
+import type {
+  AuthSession,
+  LoginInput,
+  PasswordRecoveryInput,
+  PasswordRecoveryResponse,
+  RegisterInput,
+  ChangePasswordInput,
+  Employee,
+  ManagerRegisterInput
+} from '../../../../shared/src/contracts.js';
 import { env } from '../../config/env.js';
 import { hashPassword, signSession, verifyPassword } from '../../lib/crypto.js';
 import { createEmployee, ensureMasterAccount, findEmployeeById, findEmployeeByRegistryId, logPasswordResetRequest, updatePassword } from './auth.repository.js';
@@ -53,8 +62,20 @@ export async function registerCollaborator(input: RegisterInput) {
   return { session };
 }
 
-export async function registerCollaboratorByManager(input: RegisterInput) {
-  return createCollaboratorEmployee(input);
+export async function registerCollaboratorByManager(input: ManagerRegisterInput) {
+  const employee = await createEmployee({
+    name: input.name,
+    role: input.role,
+    department: 'Operação',
+    workHoursPerDay: 8,
+    avatarColor: 'bg-indigo-600',
+    registryId: input.registryId.toUpperCase(),
+    passwordHash: await hashPassword('12345'),
+    accessRole: 'colaborador',
+    isMaster: false,
+    mustChangePassword: true
+  });
+  return employee;
 }
 
 async function createCollaboratorEmployee(input: RegisterInput) {

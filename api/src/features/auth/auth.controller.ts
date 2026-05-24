@@ -1,6 +1,12 @@
 import type { Request, Response } from 'express';
 import { clearSessionCookie, getSession, jsonError, jsonOk, setSessionCookie } from '../../lib/http.js';
-import { validateChangePasswordInput, validateLoginInput, validatePasswordRecoveryInput, validateRegisterInput } from './auth.validators.js';
+import {
+  validateChangePasswordInput,
+  validateLoginInput,
+  validateManagerRegisterInput,
+  validatePasswordRecoveryInput,
+  validateRegisterInput
+} from './auth.validators.js';
 import { changePassword, getCurrentUser, login, recoverPassword, registerCollaborator, registerCollaboratorByManager } from './auth.service.js';
 
 export async function loginController(req: Request, res: Response) {
@@ -27,7 +33,7 @@ export async function registerController(req: Request, res: Response) {
 
 export async function registerCollaboratorByManagerController(req: Request, res: Response) {
   try {
-    const input = validateRegisterInput(req.body);
+    const input = validateManagerRegisterInput(req.body);
     const session = getSession(req);
     if (!session || session.role !== 'gestor') {
       return jsonError(res, 403, 'Permissão insuficiente.');
