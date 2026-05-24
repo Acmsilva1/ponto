@@ -19,3 +19,4 @@ Monorepo oficial da aplicação de ponto.
 
 O schema oficial fica em `api/sql/schema.sql`.
 
+Quando houver mudança de colunas em produção, aplique a migração SQL correspondente em `api/sql/migrations/` no banco Supabase antes de publicar o deploy.
