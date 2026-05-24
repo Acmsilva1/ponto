@@ -35,6 +35,15 @@ export async function findEmployeeByRegistryId(registryId: string): Promise<Empl
   return data ? mapEmployee(data) : null;
 }
 
+export async function findMasterAccount(): Promise<EmployeeWithAuth | null> {
+  const supabase = getSupabaseClient();
+  if (!supabase) throw new Error('Supabase não configurado.');
+
+  const { data, error } = await supabase.from(TABLE).select('*').eq('is_master', true).maybeSingle();
+  if (error) throw new Error(error.message);
+  return data ? mapEmployee(data) : null;
+}
+
 export async function findEmployeeById(id: string): Promise<EmployeeWithAuth | null> {
   const supabase = getSupabaseClient();
   if (!supabase) throw new Error('Supabase não configurado.');
@@ -97,6 +106,31 @@ export async function updatePassword(id: string, passwordHash: string, mustChang
   return mapEmployee(data);
 }
 
+export async function syncMasterAccount(id: string, registryId: string, passwordHash: string) {
+  const supabase = getSupabaseClient();
+  if (!supabase) throw new Error('Supabase não configurado.');
+
+  const { data, error } = await supabase
+    .from(TABLE)
+    .update({
+      name: 'Gestor Master',
+      role: 'Administrador',
+      department: 'Administração',
+      registry_id: registryId,
+      password_hash: passwordHash,
+      access_role: 'gestor',
+      is_master: true,
+      must_change_password: false,
+      updated_at: new Date().toISOString()
+    })
+    .eq('id', id)
+    .select('*')
+    .single();
+
+  if (error) throw new Error(error.message);
+  return mapEmployee(data);
+}
+
 export async function logPasswordResetRequest(employeeId: string, temporaryPasswordHash: string) {
   const supabase = getSupabaseClient();
   if (!supabase) throw new Error('Supabase não configurado.');
@@ -112,6 +146,11 @@ export async function logPasswordResetRequest(employeeId: string, temporaryPassw
 export async function ensureMasterAccount(registryId: string, passwordHash: string) {
   const existing = await findEmployeeByRegistryId(registryId);
   if (existing) return existing;
+
+  const currentMaster = await findMasterAccount();
+  if (currentMaster) {
+    return syncMasterAccount(currentMaster.id, registryId, passwordHash);
+  }
 
   return createEmployee({
     name: 'Gestor Master',
