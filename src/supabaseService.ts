@@ -15,7 +15,9 @@ export function mapSupabaseEmployee(row: any): Employee {
     department: row.department,
     workHoursPerDay: Number(row.work_hours_per_day ?? row.workHoursPerDay ?? 8),
     avatarColor: row.avatar_color ?? row.avatarColor ?? 'bg-indigo-600',
-    registryId: row.registry_id ?? row.registryId ?? `REG-${Math.floor(10000 + Math.random() * 90000)}`
+    registryId: row.registry_id ?? row.registryId ?? `REG-${Math.floor(10000 + Math.random() * 90000)}`,
+    password: row.password ?? '1234',
+    accessRole: row.access_role ?? row.accessRole ?? 'colaborador'
   };
 }
 
@@ -111,7 +113,9 @@ export async function insertEmployee(employee: Employee): Promise<boolean> {
       department: employee.department,
       work_hours_per_day: employee.workHoursPerDay,
       avatar_color: employee.avatarColor,
-      registry_id: employee.registryId
+      registry_id: employee.registryId,
+      password: employee.password || '1234',
+      access_role: employee.accessRole || 'colaborador'
     };
 
     const { error } = await supabase.from('employees').upsert(payload);
@@ -125,7 +129,9 @@ export async function insertEmployee(employee: Employee): Promise<boolean> {
         department: employee.department,
         workHoursPerDay: employee.workHoursPerDay,
         avatarColor: employee.avatarColor,
-        registryId: employee.registryId
+        registryId: employee.registryId,
+        password: employee.password || '1234',
+        accessRole: employee.accessRole || 'colaborador'
       };
       const { error: fallbackError } = await supabase.from('employees').upsert(fallbackPayload);
       if (fallbackError) {

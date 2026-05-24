@@ -1,10 +1,17 @@
 import React from 'react';
-import { Clock, HardDrive, ShieldCheck } from 'lucide-react';
+import { Clock, ShieldCheck, LogOut, User, Shield } from 'lucide-react';
+import { Employee } from '../types';
 
-export function Navbar() {
+interface NavbarProps {
+  currentUser?: Employee | null;
+  activeRole?: 'colaborador' | 'gestor' | null;
+  onLogout?: () => void;
+}
+
+export function Navbar({ currentUser, activeRole, onLogout }: NavbarProps) {
   return (
-    <header className="bg-slate-900 text-white border-b border-slate-800" id="portal-header">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex flex-col sm:flex-row justify-between items-center gap-4">
+    <header className="bg-slate-900 text-white border-b border-slate-800 animate-slide-down" id="portal-header">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5 flex flex-col sm:flex-row justify-between items-center gap-4">
         {/* Brand logo & title */}
         <div className="flex items-center gap-3">
           <div className="h-10 w-10 rounded-xl bg-indigo-500 flex items-center justify-center shadow-lg shadow-indigo-500/20">
@@ -19,17 +26,39 @@ export function Navbar() {
           </div>
         </div>
 
-        {/* Business and Environment Context */}
-        <div className="flex items-center gap-3 bg-slate-800/60 py-1.5 px-3 rounded-lg border border-slate-700/50">
-          <div className="text-right shrink-0">
-            <p className="text-[11px] font-semibold text-slate-200">Painel do Colaborador</p>
-            <p className="text-[9px] font-mono text-slate-400">Offline-first (LocalStorage Ativo)</p>
+        {/* Business and Environment Context / Logout System */}
+        {currentUser && (
+          <div className="flex items-center gap-3 bg-slate-800/60 py-1.5 px-3 rounded-lg border border-slate-700/50">
+            <div className="text-right shrink-0">
+              <p className="text-[11px] font-bold text-slate-100 flex items-center justify-end gap-1">
+                {activeRole === 'gestor' ? (
+                  <>
+                    <Shield className="w-3 h-3 text-indigo-400" />
+                    <span className="text-indigo-400 font-semibold">[Gestor]</span> {currentUser.name.split(' ')[0]}
+                  </>
+                ) : (
+                  <>
+                    <User className="w-3 h-3 text-emerald-400" />
+                    <span>{currentUser.name}</span>
+                  </>
+                )}
+              </p>
+              <p className="text-[9px] font-mono text-slate-400">Ativo como: {activeRole === 'gestor' ? 'Administrador' : 'Colaborador'}</p>
+            </div>
+            
+            <div className="h-6 w-px bg-slate-700" />
+            
+            <button
+              onClick={onLogout}
+              id="btn-navbar-logout"
+              className="text-xs text-rose-400 hover:text-rose-300 font-semibold flex items-center gap-1 py-1 px-2.5 rounded-md bg-rose-500/10 hover:bg-rose-500/20 transition cursor-pointer"
+              title="Desconectar do painel atual"
+            >
+              <LogOut className="w-3.5 h-3.5" />
+              <span className="hidden md:inline">Sair</span>
+            </button>
           </div>
-          <div className="h-6 w-px bg-slate-700" />
-          <div className="bg-slate-900 px-2 py-1 rounded text-[10px] font-bold font-mono text-indigo-400 border border-slate-700">
-            v1.0.4
-          </div>
-        </div>
+        )}
       </div>
     </header>
   );

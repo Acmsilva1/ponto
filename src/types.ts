@@ -25,6 +25,8 @@ export interface Employee {
   workHoursPerDay: number; // usually 8
   avatarColor: string;
   registryId: string; // CTPS or registration number
+  password?: string; // Optional password for portal sign-in
+  accessRole?: 'colaborador' | 'gestor'; // Optional access role (default is 'colaborador')
 }
 
 export interface DailySummary {
