@@ -313,7 +313,7 @@ export function ManagerWorkspace({
       setNewRole('');
       setNewRegistryId('');
       await onRefresh();
-      setRegisterFeedback(`Colaborador ${result.employee.name} cadastrado com sucesso. Matrícula: ${result.employee.registryId}.`);
+      setRegisterFeedback(`Colaborador ${result.employee.name} cadastrado com sucesso. ID: ${result.employee.registryId}.`);
     } catch (error) {
       setRegisterFeedback(error instanceof Error ? error.message : 'Falha ao cadastrar colaborador.');
     } finally {
@@ -459,7 +459,8 @@ export function ManagerWorkspace({
                 <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-indigo-300/80">Cadastro administrativo</p>
                 <h3 className="mt-2 text-2xl font-black text-white">Novo colaborador</h3>
                 <p className="mt-2 text-sm text-slate-400">
-                  A senha padrão é <span className="font-bold text-white">12345</span> e a troca será obrigatória no primeiro acesso.
+                  Informe o nome completo e o ID que o colaborador usará para entrar. A senha inicial será{' '}
+                  <span className="font-bold text-white">12345</span> e a troca será obrigatória no primeiro acesso.
                 </p>
               </div>
               <button
@@ -479,15 +480,15 @@ export function ManagerWorkspace({
                 className="w-full rounded-[1.25rem] border border-white/10 bg-white/[0.03] px-4 py-3 text-sm text-slate-100 outline-none transition placeholder:text-slate-500 focus:border-indigo-400"
               />
               <input
-                value={newRole}
-                onChange={(e) => setNewRole(e.target.value)}
-                placeholder="Função"
+                value={newRegistryId}
+                onChange={(e) => setNewRegistryId(e.target.value)}
+                placeholder="ID do colaborador"
                 className="w-full rounded-[1.25rem] border border-white/10 bg-white/[0.03] px-4 py-3 text-sm text-slate-100 outline-none transition placeholder:text-slate-500 focus:border-indigo-400"
               />
               <input
-                value={newRegistryId}
-                onChange={(e) => setNewRegistryId(e.target.value)}
-                placeholder="Matrícula"
+                value={newRole}
+                onChange={(e) => setNewRole(e.target.value)}
+                placeholder="Função"
                 className="w-full rounded-[1.25rem] border border-white/10 bg-white/[0.03] px-4 py-3 text-sm text-slate-100 outline-none transition placeholder:text-slate-500 focus:border-indigo-400"
               />
 

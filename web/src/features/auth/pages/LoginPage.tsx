@@ -40,7 +40,7 @@ export function LoginPage({ onLogin, apiStatus }: LoginPageProps) {
 
   async function handleRecovery() {
     if (!loginId.trim()) {
-      setMessage('Informe o nome ou registro antes de recuperar o acesso.');
+      setMessage('Informe o ID ou registro antes de recuperar o acesso.');
       return;
     }
 
@@ -105,12 +105,12 @@ export function LoginPage({ onLogin, apiStatus }: LoginPageProps) {
           <form onSubmit={submitLogin} className="mt-6 space-y-4">
             <div>
               <label className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-400">
-                {tab === 'gestor' ? 'Registro do gestor master' : 'Nome do colaborador'}
+                {tab === 'gestor' ? 'Registro do gestor master' : 'ID do colaborador'}
               </label>
               <input
                 value={loginId}
                 onChange={(e) => setLoginId(e.target.value)}
-                placeholder={tab === 'gestor' ? 'GESTOR' : 'Nome completo'}
+                placeholder={tab === 'gestor' ? 'GESTOR' : 'ID do colaborador'}
                 className="w-full rounded-[1.25rem] border border-white/10 bg-slate-950/70 px-4 py-3 text-sm text-slate-100 outline-none transition placeholder:text-slate-500 focus:border-indigo-400"
               />
             </div>

@@ -9,7 +9,7 @@ import type {
 export function validateLoginInput(input: unknown): LoginInput {
   const payload = input as Partial<LoginInput>;
   if (!payload.registryId || !payload.password) {
-    throw new Error('Nome/registro e senha são obrigatórios.');
+    throw new Error('ID/registro e senha são obrigatórios.');
   }
   return { registryId: String(payload.registryId).trim(), password: String(payload.password) };
 }
