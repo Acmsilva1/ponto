@@ -7,8 +7,7 @@ const typeLabels: Record<CreateTimeEntryInput['type'], string> = {
   entrada: 'Entrada',
   almoco_saida: 'Início do intervalo',
   almoco_retorno: 'Retorno do intervalo',
-  saida: 'Saída final',
-  extra: 'Extra'
+  saida: 'Saída final'
 };
 
 function getBrasiliaDateKey(timestamp: string) {
@@ -32,8 +31,11 @@ export async function saveTimeEntry(input: CreateTimeEntryInput) {
     (entry) => getBrasiliaDateKey(entry.timestamp) === getBrasiliaDateKey(input.timestamp)
   );
 
-  if (input.type === 'extra') {
-    const officialExit = [...currentDayEntries]
+  const officialDayEntries = currentDayEntries.filter((entry) => entry.journey === 'official');
+  const extraDayEntries = currentDayEntries.filter((entry) => entry.journey === 'extra');
+
+  if (input.journey === 'extra') {
+    const officialExit = [...officialDayEntries]
       .filter((entry) => entry.type === 'saida')
       .sort((left, right) => left.timestamp.localeCompare(right.timestamp))
       .at(-1);
@@ -41,9 +43,15 @@ export async function saveTimeEntry(input: CreateTimeEntryInput) {
     if (!officialExit || new Date(input.timestamp).getTime() <= new Date(officialExit.timestamp).getTime()) {
       throw new Error('O período de trabalho vigente está em atividade ainda.');
     }
-  } else {
-    const officialDayEntries = currentDayEntries.filter((entry) => officialTypes.includes(entry.type));
 
+    if (extraDayEntries.some((entry) => entry.type === input.type)) {
+      throw new Error(`Já existe uma marcação de ${typeLabels[input.type]} na jornada extra para este dia.`);
+    }
+
+    if (extraDayEntries.length >= 4) {
+      throw new Error('A jornada extra já possui as 4 marcações permitidas.');
+    }
+  } else {
     if (officialDayEntries.some((entry) => entry.type === input.type)) {
       throw new Error(`Já existe uma marcação de ${typeLabels[input.type]} para este dia.`);
     }
@@ -57,6 +65,7 @@ export async function saveTimeEntry(input: CreateTimeEntryInput) {
     employeeId: input.employeeId,
     timestamp: input.timestamp,
     type: input.type,
+    journey: input.journey || 'official',
     isManual: Boolean(input.isManual),
     justification: input.justification ?? null,
     location: input.location ?? null

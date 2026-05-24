@@ -27,9 +27,7 @@ export async function getDashboardSummary(scope: { role: 'colaborador' | 'gestor
   ]);
 
   const today = getBrasiliaDateKey(new Date());
-  const todayEntries = timeEntries.filter(
-    (item) => item.type !== 'extra' && getBrasiliaDateKey(new Date(item.timestamp)) === today
-  );
+  const todayEntries = timeEntries.filter((item) => item.journey === 'official' && getBrasiliaDateKey(new Date(item.timestamp)) === today);
   const uniqueTodayEntries = new Map(todayEntries.map((item) => [item.type, item]));
 
   return {

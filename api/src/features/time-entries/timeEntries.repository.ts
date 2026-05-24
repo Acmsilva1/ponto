@@ -9,6 +9,7 @@ function mapTimeEntry(row: any): TimeEntry {
     employeeId: row.employee_id,
     timestamp: row.timestamp,
     type: row.type,
+    journey: row.journey ?? 'official',
     isManual: Boolean(row.is_manual),
     justification: row.justification ?? null,
     location: row.location ?? null,
@@ -35,6 +36,7 @@ export async function createTimeEntry(entry: Omit<TimeEntry, 'id' | 'createdAt'>
       employee_id: entry.employeeId,
       timestamp: entry.timestamp,
       type: entry.type,
+      journey: entry.journey,
       is_manual: entry.isManual,
       justification: entry.justification ?? null,
       location: entry.location ?? null

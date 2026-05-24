@@ -1,13 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
-import type { Employee, Justification, TimeEntry, DashboardSummary } from '@shared/contracts';
+import type { Employee, Justification, TimeEntry, DashboardSummary, TimeEntryType } from '@shared/contracts';
 import { Navbar } from '../../layout/components/Navbar.js';
 import { CollaboratorWorkspace } from '../components/CollaboratorWorkspace.js';
 import { ManagerWorkspace } from '../components/ManagerWorkspace.js';
 import { createTimeEntry } from '../../time-entries/services/timeEntriesService.js';
 import { createJustification } from '../../justifications/services/justificationsService.js';
-import type { TimeEntryType } from '@shared/contracts';
-
-type OfficialTimeEntryType = Exclude<TimeEntryType, 'extra'>;
 
 interface DashboardPageProps {
   employee: Employee;
@@ -51,34 +48,39 @@ export function DashboardPage({
     () => employees.find((item) => item.id === selectedEmployeeId) || employee,
     [employees, employee, selectedEmployeeId]
   );
+
   const collaboratorEntries = useMemo(() => timeEntries.filter((entry) => entry.employeeId === employee.id), [employee.id, timeEntries]);
-  const collaboratorTodayOfficialEntries = useMemo(() => {
-    const todayKey = getBrasiliaDateKey(new Date());
-    const map = new Map<OfficialTimeEntryType, TimeEntry>();
 
-    for (const entry of collaboratorEntries) {
-      if (entry.type === 'extra') {
-        continue;
-      }
+  const todayKeys = useMemo(() => {
+    const today = getBrasiliaDateKey(new Date());
+    return {
+      today,
+      official: collaboratorEntries.filter(
+        (entry) => entry.journey === 'official' && getBrasiliaDateKey(new Date(entry.timestamp)) === today
+      ),
+      extra: collaboratorEntries.filter((entry) => entry.journey === 'extra' && getBrasiliaDateKey(new Date(entry.timestamp)) === today)
+    };
+  }, [collaboratorEntries]);
 
-      if (getBrasiliaDateKey(new Date(entry.timestamp)) !== todayKey) {
-        continue;
-      }
-
+  const collaboratorOfficialEntries = useMemo(() => {
+    const map = new Map<TimeEntryType, TimeEntry>();
+    for (const entry of todayKeys.official) {
       if (!map.has(entry.type)) {
-        map.set(entry.type as OfficialTimeEntryType, entry);
+        map.set(entry.type, entry);
       }
     }
-
     return [...map.values()].sort((left, right) => left.timestamp.localeCompare(right.timestamp));
-  }, [collaboratorEntries]);
-  const collaboratorTodayExtraEntries = useMemo(() => {
-    const todayKey = getBrasiliaDateKey(new Date());
+  }, [todayKeys.official]);
 
-    return collaboratorEntries
-      .filter((entry) => entry.type === 'extra' && getBrasiliaDateKey(new Date(entry.timestamp)) === todayKey)
-      .sort((left, right) => left.timestamp.localeCompare(right.timestamp));
-  }, [collaboratorEntries]);
+  const collaboratorExtraEntries = useMemo(() => {
+    const map = new Map<TimeEntryType, TimeEntry>();
+    for (const entry of todayKeys.extra) {
+      if (!map.has(entry.type)) {
+        map.set(entry.type, entry);
+      }
+    }
+    return [...map.values()].sort((left, right) => left.timestamp.localeCompare(right.timestamp));
+  }, [todayKeys.extra]);
 
   useEffect(() => {
     if (employee.accessRole === 'gestor') {
@@ -94,12 +96,12 @@ export function DashboardPage({
     }
   }, [employee.accessRole, employee.id, employees, selectedEmployeeId]);
 
-  async function handleOfficialClock(type: OfficialTimeEntryType, justification: string) {
-    if (collaboratorTodayOfficialEntries.some((entry) => entry.type === type)) {
+  async function handleOfficialClock(type: TimeEntryType, justification: string) {
+    if (collaboratorOfficialEntries.some((entry) => entry.type === type)) {
       throw new Error('Este tipo de marcação já foi registrado hoje.');
     }
 
-    if (collaboratorTodayOfficialEntries.length >= 4) {
+    if (collaboratorOfficialEntries.length >= 4) {
       throw new Error('Você já registrou as 4 marcações permitidas hoje.');
     }
 
@@ -107,6 +109,7 @@ export function DashboardPage({
       employeeId: employee.id,
       timestamp: new Date().toISOString(),
       type,
+      journey: 'official',
       isManual: Boolean(justification.trim()),
       justification: justification.trim() || null,
       location: null
@@ -127,15 +130,45 @@ export function DashboardPage({
     await onRefresh();
   }
 
-  async function handleExtraClock() {
+  async function handleExtraClock(type: TimeEntryType, justification: string) {
+    const officialExit = [...collaboratorOfficialEntries]
+      .filter((entry) => entry.type === 'saida')
+      .sort((left, right) => left.timestamp.localeCompare(right.timestamp))
+      .at(-1);
+
+    if (!officialExit || new Date().getTime() <= new Date(officialExit.timestamp).getTime()) {
+      throw new Error('O período de trabalho vigente está em atividade ainda.');
+    }
+
+    if (collaboratorExtraEntries.some((entry) => entry.type === type)) {
+      throw new Error('Este tipo de marcação já foi registrado na jornada extra hoje.');
+    }
+
+    if (collaboratorExtraEntries.length >= 4) {
+      throw new Error('A jornada extra já possui as 4 marcações permitidas.');
+    }
+
     await createTimeEntry({
       employeeId: employee.id,
       timestamp: new Date().toISOString(),
-      type: 'extra',
-      isManual: false,
-      justification: null,
+      type,
+      journey: 'extra',
+      isManual: Boolean(justification.trim()),
+      justification: justification.trim() || null,
       location: null
     });
+
+    if (justification.trim()) {
+      await createJustification({
+        employeeId: employee.id,
+        date: new Date().toISOString().slice(0, 10),
+        reason: justification.trim(),
+        status: 'pending',
+        reviewedBy: null,
+        reviewedAt: null,
+        timeEntryId: null
+      });
+    }
 
     await onRefresh();
   }
@@ -159,9 +192,9 @@ export function DashboardPage({
         ) : (
           <CollaboratorWorkspace
             timeEntries={collaboratorEntries}
-            officialEntries={collaboratorTodayOfficialEntries}
-            extraEntries={collaboratorTodayExtraEntries}
-            onClock={handleOfficialClock}
+            officialEntries={collaboratorOfficialEntries}
+            extraEntries={collaboratorExtraEntries}
+            onClockOfficial={handleOfficialClock}
             onClockExtra={handleExtraClock}
           />
         )}

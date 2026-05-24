@@ -2,8 +2,6 @@ import { CalendarDays, ChevronDown } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import type { TimeEntry, TimeEntryType } from '@shared/contracts';
 
-type OfficialTimeEntryType = Exclude<TimeEntryType, 'extra'>;
-
 interface MonthlyTimesheetCardProps {
   entries: TimeEntry[];
   dark?: boolean;
@@ -13,11 +11,10 @@ const typeLabel: Record<TimeEntryType, string> = {
   entrada: 'Entrada',
   almoco_saida: 'Início do intervalo',
   almoco_retorno: 'Retorno do intervalo',
-  saida: 'Saída final',
-  extra: 'Extra'
+  saida: 'Saída final'
 };
 
-const typeOrder: OfficialTimeEntryType[] = ['entrada', 'almoco_saida', 'almoco_retorno', 'saida'];
+const typeOrder: TimeEntryType[] = ['entrada', 'almoco_saida', 'almoco_retorno', 'saida'];
 
 function getBrasiliaDateParts(date: Date) {
   const formatter = new Intl.DateTimeFormat('en-CA', {
@@ -90,69 +87,31 @@ export function MonthlyTimesheetCard({ entries, dark = true }: MonthlyTimesheetC
     [entries, selectedMonth]
   );
 
-  const officialMonthEntries = useMemo(() => monthEntries.filter((entry) => entry.type !== 'extra'), [monthEntries]);
-  const extraMonthEntries = useMemo(() => monthEntries.filter((entry) => entry.type === 'extra'), [monthEntries]);
-
-  const extraGroups = useMemo(() => {
-    const map = new Map<string, string[]>();
-
-    for (const entry of extraMonthEntries) {
-      const dateKey = getBrasiliaDateKey(new Date(entry.timestamp));
-      const times = map.get(dateKey) || [];
-      times.push(getBrasiliaTime(new Date(entry.timestamp)));
-      map.set(dateKey, times);
-    }
-
-    return [...map.entries()]
-      .map(([dateKey, times]) => ({ dateKey, times }))
-      .sort((left, right) => right.dateKey.localeCompare(left.dateKey));
-  }, [extraMonthEntries]);
-
-  const uniqueMonthEntries = useMemo(() => {
-    const map = new Map<string, TimeEntry>();
-
-    for (const entry of officialMonthEntries) {
-      const dateKey = getBrasiliaDateKey(new Date(entry.timestamp));
-      map.set(`${dateKey}-${entry.type}`, entry);
-    }
-
-    return [...map.values()].sort((left, right) => left.timestamp.localeCompare(right.timestamp));
-  }, [officialMonthEntries]);
-
   const rows = useMemo(() => {
-    const map = new Map<string, Record<OfficialTimeEntryType, string> & { extra: string[] }>();
+    const map = new Map<
+      string,
+      {
+        official: Record<TimeEntryType, string>;
+        extra: Record<TimeEntryType, string>;
+      }
+    >();
 
-    for (const entry of uniqueMonthEntries) {
+    for (const entry of monthEntries) {
       const dateKey = getBrasiliaDateKey(new Date(entry.timestamp));
       const current = map.get(dateKey) || {
-        entrada: '-',
-        almoco_saida: '-',
-        almoco_retorno: '-',
-        saida: '-',
-        extra: []
+        official: { entrada: '-', almoco_saida: '-', almoco_retorno: '-', saida: '-' },
+        extra: { entrada: '-', almoco_saida: '-', almoco_retorno: '-', saida: '-' }
       };
 
-      current[entry.type as OfficialTimeEntryType] = getBrasiliaTime(new Date(entry.timestamp));
-      map.set(dateKey, current);
-    }
-
-    for (const { dateKey, times } of extraGroups) {
-      const current = map.get(dateKey) || {
-        entrada: '-',
-        almoco_saida: '-',
-        almoco_retorno: '-',
-        saida: '-',
-        extra: []
-      };
-
-      current.extra = times;
+      const bucket = entry.journey === 'extra' ? current.extra : current.official;
+      bucket[entry.type] = getBrasiliaTime(new Date(entry.timestamp));
       map.set(dateKey, current);
     }
 
     return [...map.entries()]
       .map(([dateKey, value]) => ({ dateKey, value }))
       .sort((left, right) => right.dateKey.localeCompare(left.dateKey));
-  }, [extraGroups, uniqueMonthEntries]);
+  }, [monthEntries]);
 
   const currentLabel = getMonthLabel(selectedMonth);
 
@@ -201,8 +160,8 @@ export function MonthlyTimesheetCard({ entries, dark = true }: MonthlyTimesheetC
 
       <div className="p-5">
         <p className={`mb-4 text-sm ${dark ? 'text-slate-400' : 'text-slate-500'}`}>
-          {currentLabel} • {rows.length} dias com marcação • {uniqueMonthEntries.length} batidas oficiais no período
-          {extraMonthEntries.length > 0 ? ` • ${extraMonthEntries.length} extras` : ''}
+          {currentLabel} • {rows.length} dias com marcação • {monthEntries.filter((entry) => entry.journey === 'official').length} batidas oficiais •{' '}
+          {monthEntries.filter((entry) => entry.journey === 'extra').length} extras
         </p>
 
         {rows.length === 0 ? (
@@ -237,7 +196,7 @@ export function MonthlyTimesheetCard({ entries, dark = true }: MonthlyTimesheetC
                       <td key={`${dateKey}-${type}`} className="px-4 py-4">
                         <span
                           className={`inline-flex rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] ${
-                            value[type] === '-'
+                            value.official[type] === '-'
                               ? dark
                                 ? 'bg-white/[0.04] text-slate-500'
                                 : 'bg-slate-100 text-slate-400'
@@ -246,34 +205,33 @@ export function MonthlyTimesheetCard({ entries, dark = true }: MonthlyTimesheetC
                                 : 'bg-indigo-50 text-indigo-700'
                           }`}
                         >
-                          {value[type]}
+                          {value.official[type]}
                         </span>
                       </td>
                     ))}
 
                     <td className="px-4 py-4">
-                      {value.extra.length === 0 ? (
-                        <span
-                          className={`inline-flex rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] ${
-                            dark ? 'bg-white/[0.04] text-slate-500' : 'bg-slate-100 text-slate-400'
-                          }`}
-                        >
-                          -
-                        </span>
-                      ) : (
-                        <div className="flex flex-wrap gap-2">
-                          {value.extra.map((time, index) => (
-                            <span
-                              key={`${dateKey}-extra-${time}-${index}`}
-                              className={`inline-flex rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] ${
-                                dark ? 'bg-amber-500/20 text-amber-100' : 'bg-amber-50 text-amber-700'
-                              }`}
-                            >
-                              {time}
+                      <div className="grid grid-cols-2 gap-2">
+                        {typeOrder.map((type) => (
+                          <div
+                            key={`${dateKey}-extra-${type}`}
+                            className={`flex flex-col items-center justify-center rounded-xl px-2 py-2 text-center text-[11px] font-semibold uppercase tracking-[0.18em] ${
+                              value.extra[type] === '-'
+                                ? dark
+                                  ? 'bg-white/[0.04] text-slate-500'
+                                  : 'bg-slate-100 text-slate-400'
+                                : dark
+                                  ? 'bg-amber-500/20 text-amber-100'
+                                  : 'bg-amber-50 text-amber-700'
+                            }`}
+                          >
+                            <span className="text-[9px] opacity-80">{typeLabel[type]}</span>
+                            <span className="mt-1 text-[11px] font-black normal-case tracking-normal">
+                              {value.extra[type] === '-' ? '-' : value.extra[type]}
                             </span>
-                          ))}
-                        </div>
-                      )}
+                          </div>
+                        ))}
+                      </div>
                     </td>
                   </tr>
                 ))}

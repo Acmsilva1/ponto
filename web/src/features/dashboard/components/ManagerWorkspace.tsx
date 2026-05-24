@@ -86,11 +86,10 @@ export function ManagerWorkspace({
     ];
 
     const typeTotals = [
-      { name: 'Entrada', value: timeEntries.filter((item) => item.type === 'entrada').length },
-      { name: 'Almoço saída', value: timeEntries.filter((item) => item.type === 'almoco_saida').length },
-      { name: 'Retorno', value: timeEntries.filter((item) => item.type === 'almoco_retorno').length },
-      { name: 'Saída', value: timeEntries.filter((item) => item.type === 'saida').length },
-      { name: 'Extra', value: timeEntries.filter((item) => item.type === 'extra').length }
+      { name: 'Entrada', value: timeEntries.filter((item) => item.journey === 'official' && item.type === 'entrada').length },
+      { name: 'Almoço saída', value: timeEntries.filter((item) => item.journey === 'official' && item.type === 'almoco_saida').length },
+      { name: 'Retorno', value: timeEntries.filter((item) => item.journey === 'official' && item.type === 'almoco_retorno').length },
+      { name: 'Saída', value: timeEntries.filter((item) => item.journey === 'official' && item.type === 'saida').length }
     ];
 
     return { byEmployee, lastDays, statusTotals, typeTotals, collaboratorsOnly };

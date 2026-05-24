@@ -1,4 +1,4 @@
-import type { TimeEntry, TimeEntryType } from '@shared/contracts';
+import type { TimeEntry, TimeEntryJourney, TimeEntryType } from '@shared/contracts';
 import { apiRequest } from '../../../lib/apiClient.js';
 
 export async function listTimeEntries(employeeId?: string) {
@@ -10,6 +10,7 @@ export async function createTimeEntry(input: {
   employeeId: string;
   timestamp: string;
   type: TimeEntryType;
+  journey?: TimeEntryJourney;
   isManual: boolean;
   justification?: string | null;
   location?: TimeEntry['location'] | null;

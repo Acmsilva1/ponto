@@ -1,5 +1,6 @@
 export type AccessRole = 'colaborador' | 'gestor';
-export type TimeEntryType = 'entrada' | 'almoco_saida' | 'almoco_retorno' | 'saida' | 'extra';
+export type TimeEntryJourney = 'official' | 'extra';
+export type TimeEntryType = 'entrada' | 'almoco_saida' | 'almoco_retorno' | 'saida';
 export type JustificationStatus = 'pending' | 'approved' | 'rejected';
 
 export interface Employee {
@@ -33,6 +34,7 @@ export interface TimeEntry {
   employeeId: string;
   timestamp: string;
   type: TimeEntryType;
+  journey: TimeEntryJourney;
   isManual: boolean;
   justification?: string | null;
   location?: GeoLocationData | null;

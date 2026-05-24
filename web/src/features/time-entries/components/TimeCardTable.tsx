@@ -9,8 +9,7 @@ const typeLabel: Record<string, string> = {
   entrada: 'Entrada',
   almoco_saida: 'Saída almoço',
   almoco_retorno: 'Retorno almoço',
-  saida: 'Saída',
-  extra: 'Extra'
+  saida: 'Saída'
 };
 
 export function TimeCardTable({ entries, dark = true }: TimeCardTableProps) {
@@ -55,13 +54,34 @@ export function TimeCardTable({ entries, dark = true }: TimeCardTableProps) {
                       {new Date(entry.timestamp).toLocaleString('pt-BR')}
                     </td>
                     <td className="px-4 py-4">
-                      <span
-                        className={`inline-flex rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] ${
-                          dark ? 'bg-indigo-500/15 text-indigo-200' : 'bg-indigo-50 text-indigo-700'
-                        }`}
-                      >
-                        {typeLabel[entry.type] || entry.type}
-                      </span>
+                      <div className="flex flex-wrap gap-2">
+                        <span
+                          className={`inline-flex rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] ${
+                            entry.journey === 'extra'
+                              ? dark
+                                ? 'bg-amber-500/20 text-amber-100'
+                                : 'bg-amber-50 text-amber-700'
+                              : dark
+                                ? 'bg-indigo-500/15 text-indigo-200'
+                                : 'bg-indigo-50 text-indigo-700'
+                          }`}
+                        >
+                          {typeLabel[entry.type] || entry.type}
+                        </span>
+                        <span
+                          className={`inline-flex rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] ${
+                            entry.journey === 'extra'
+                              ? dark
+                                ? 'bg-amber-400/10 text-amber-100'
+                                : 'bg-amber-100 text-amber-700'
+                              : dark
+                                ? 'bg-white/[0.04] text-slate-400'
+                                : 'bg-slate-100 text-slate-400'
+                          }`}
+                        >
+                          {entry.journey === 'extra' ? 'Extra' : 'Oficial'}
+                        </span>
+                      </div>
                     </td>
                     <td className={`px-4 py-4 text-sm ${dark ? 'text-slate-400' : 'text-slate-500'}`}>
                       {entry.justification || '-'}

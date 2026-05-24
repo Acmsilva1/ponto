@@ -1,11 +1,13 @@
-import type { TimeEntryType, GeoLocationData } from '../../../../shared/src/contracts.js';
+import type { TimeEntryJourney, TimeEntryType, GeoLocationData } from '../../../../shared/src/contracts.js';
 
-const allowedTypes: TimeEntryType[] = ['entrada', 'almoco_saida', 'almoco_retorno', 'saida', 'extra'];
+const allowedTypes: TimeEntryType[] = ['entrada', 'almoco_saida', 'almoco_retorno', 'saida'];
+const allowedJourneys: TimeEntryJourney[] = ['official', 'extra'];
 
 export interface CreateTimeEntryInput {
   employeeId: string;
   timestamp: string;
   type: TimeEntryType;
+  journey?: TimeEntryJourney;
   isManual?: boolean;
   justification?: string | null;
   location?: GeoLocationData | null;
@@ -21,10 +23,15 @@ export function validateCreateTimeEntryInput(input: unknown): CreateTimeEntryInp
     throw new Error('Tipo de marcação inválido.');
   }
 
+  if (payload.journey && !allowedJourneys.includes(payload.journey)) {
+    throw new Error('Jornada de marcação inválida.');
+  }
+
   return {
     employeeId: String(payload.employeeId),
     timestamp: String(payload.timestamp),
-    type: payload.type as TimeEntryType,
+    type: payload.type,
+    journey: payload.journey || 'official',
     isManual: Boolean(payload.isManual),
     justification: payload.justification ?? null,
     location: payload.location ?? null
