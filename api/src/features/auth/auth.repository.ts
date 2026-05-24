@@ -145,7 +145,9 @@ export async function logPasswordResetRequest(employeeId: string, temporaryPassw
 
 export async function ensureMasterAccount(registryId: string, passwordHash: string) {
   const existing = await findEmployeeByRegistryId(registryId);
-  if (existing) return existing;
+  if (existing) {
+    return syncMasterAccount(existing.id, registryId, passwordHash);
+  }
 
   const currentMaster = await findMasterAccount();
   if (currentMaster) {
