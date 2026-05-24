@@ -1,15 +1,17 @@
-import { useMemo } from 'react';
+import { useMemo, useState, type FormEvent } from 'react';
 import type { EChartsOption } from 'echarts';
 import type { DashboardSummary, Employee, Justification, TimeEntry } from '@shared/contracts';
 import { EmployeeSelector } from '../../employees/components/EmployeeSelector.js';
 import { TimeCardTable } from '../../time-entries/components/TimeCardTable.js';
 import { EChartCard } from './EChartCard.js';
+import { registerCollaboratorByManager } from '../../auth/services/authService.js';
 
 interface ManagerWorkspaceProps {
   employee: Employee;
   employees: Employee[];
   selectedEmployee: Employee;
   onSelectEmployee: (employeeId: string) => void;
+  onRefresh: () => Promise<void>;
   timeEntries: TimeEntry[];
   justifications: Justification[];
   summary: DashboardSummary;
@@ -28,10 +30,18 @@ export function ManagerWorkspace({
   employees,
   selectedEmployee,
   onSelectEmployee,
+  onRefresh,
   timeEntries,
   justifications,
   summary
 }: ManagerWorkspaceProps) {
+  const [newName, setNewName] = useState('');
+  const [newRole, setNewRole] = useState('');
+  const [newDepartment, setNewDepartment] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [registerBusy, setRegisterBusy] = useState(false);
+  const [registerFeedback, setRegisterFeedback] = useState('');
+
   const chartData = useMemo(() => {
     const byEmployee = employees
       .map((item) => ({
@@ -185,6 +195,31 @@ export function ManagerWorkspace({
   const selectedEntries = timeEntries.filter((entry) => entry.employeeId === selectedEmployee.id);
   const selectedJustifications = justifications.filter((item) => item.employeeId === selectedEmployee.id);
 
+  async function handleRegisterCollaborator(event: FormEvent) {
+    event.preventDefault();
+    setRegisterBusy(true);
+    setRegisterFeedback('');
+    try {
+      const result = await registerCollaboratorByManager({
+        name: newName.trim(),
+        role: newRole.trim(),
+        department: newDepartment.trim(),
+        password: newPassword
+      });
+
+      setNewName('');
+      setNewRole('');
+      setNewDepartment('');
+      setNewPassword('');
+      await onRefresh();
+      setRegisterFeedback(`Colaborador ${result.employee.name} cadastrado com sucesso. Registro: ${result.employee.registryId}.`);
+    } catch (error) {
+      setRegisterFeedback(error instanceof Error ? error.message : 'Falha ao cadastrar colaborador.');
+    } finally {
+      setRegisterBusy(false);
+    }
+  }
+
   return (
     <section className="space-y-6">
       <section className="rounded-[2rem] border border-white/10 bg-slate-950/80 p-6 shadow-[0_24px_80px_rgba(2,6,23,0.45)]">
@@ -219,6 +254,55 @@ export function ManagerWorkspace({
 
       <div className="grid gap-6 xl:grid-cols-[340px_1fr]">
         <div className="space-y-6">
+          <section className="rounded-[1.75rem] border border-indigo-400/20 bg-indigo-500/10 p-5">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-indigo-100/80">Cadastro administrativo</p>
+            <h3 className="mt-2 text-2xl font-black text-white">Novo colaborador</h3>
+            <p className="mt-2 text-sm leading-6 text-indigo-50/80">
+              Cadastre pessoas para registrar ponto. O gestor é o único perfil com essa permissão.
+            </p>
+
+            <form onSubmit={handleRegisterCollaborator} className="mt-5 space-y-3">
+              <input
+                value={newName}
+                onChange={(e) => setNewName(e.target.value)}
+                placeholder="Nome completo"
+                className="w-full rounded-[1.25rem] border border-white/10 bg-slate-950/70 px-4 py-3 text-sm text-slate-100 outline-none transition placeholder:text-slate-500 focus:border-indigo-400"
+              />
+              <input
+                value={newRole}
+                onChange={(e) => setNewRole(e.target.value)}
+                placeholder="Cargo"
+                className="w-full rounded-[1.25rem] border border-white/10 bg-slate-950/70 px-4 py-3 text-sm text-slate-100 outline-none transition placeholder:text-slate-500 focus:border-indigo-400"
+              />
+              <input
+                value={newDepartment}
+                onChange={(e) => setNewDepartment(e.target.value)}
+                placeholder="Setor"
+                className="w-full rounded-[1.25rem] border border-white/10 bg-slate-950/70 px-4 py-3 text-sm text-slate-100 outline-none transition placeholder:text-slate-500 focus:border-indigo-400"
+              />
+              <input
+                type="password"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                placeholder="Senha desejada"
+                className="w-full rounded-[1.25rem] border border-white/10 bg-slate-950/70 px-4 py-3 text-sm text-slate-100 outline-none transition placeholder:text-slate-500 focus:border-indigo-400"
+              />
+              <button
+                type="submit"
+                disabled={registerBusy}
+                className="w-full rounded-[1.25rem] bg-white px-4 py-3 text-sm font-bold text-slate-950 transition hover:-translate-y-0.5 hover:bg-slate-200 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {registerBusy ? 'Cadastrando...' : 'Cadastrar colaborador'}
+              </button>
+            </form>
+
+            {registerFeedback && (
+              <div className="mt-4 rounded-[1.25rem] border border-white/10 bg-white/[0.05] p-4 text-sm text-slate-100">
+                {registerFeedback}
+              </div>
+            )}
+          </section>
+
           <EmployeeSelector employees={employees} selectedId={selectedEmployee.id} onSelect={onSelectEmployee} dark />
 
           <section className="rounded-[1.75rem] border border-white/10 bg-slate-950/80 p-5">

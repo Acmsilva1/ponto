@@ -48,6 +48,16 @@ export async function login(input: LoginInput) {
 }
 
 export async function registerCollaborator(input: RegisterInput) {
+  const employee = await createCollaboratorEmployee(input);
+  const session = await issueSession(employee);
+  return { session };
+}
+
+export async function registerCollaboratorByManager(input: RegisterInput) {
+  return createCollaboratorEmployee(input);
+}
+
+async function createCollaboratorEmployee(input: RegisterInput) {
   const avatarPalette = [
     'bg-indigo-600',
     'bg-emerald-600',
@@ -74,9 +84,7 @@ export async function registerCollaborator(input: RegisterInput) {
     isMaster: false,
     mustChangePassword: false
   });
-
-  const session = await issueSession(employee);
-  return { session };
+  return employee;
 }
 
 export async function changePassword(employeeId: string, input: ChangePasswordInput) {

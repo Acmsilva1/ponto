@@ -1,7 +1,7 @@
 import type { Request, Response } from 'express';
 import { clearSessionCookie, getSession, jsonError, jsonOk, setSessionCookie } from '../../lib/http.js';
 import { validateChangePasswordInput, validateLoginInput, validatePasswordRecoveryInput, validateRegisterInput } from './auth.validators.js';
-import { changePassword, getCurrentUser, login, recoverPassword, registerCollaborator } from './auth.service.js';
+import { changePassword, getCurrentUser, login, recoverPassword, registerCollaborator, registerCollaboratorByManager } from './auth.service.js';
 
 export async function loginController(req: Request, res: Response) {
   try {
@@ -20,6 +20,21 @@ export async function registerController(req: Request, res: Response) {
     const result = await registerCollaborator(input);
     setSessionCookie(res, result.session.token);
     return jsonOk(res, { session: result.session });
+  } catch (error) {
+    return jsonError(res, 400, error instanceof Error ? error.message : 'Falha ao registrar.');
+  }
+}
+
+export async function registerCollaboratorByManagerController(req: Request, res: Response) {
+  try {
+    const input = validateRegisterInput(req.body);
+    const session = getSession(req);
+    if (!session || session.role !== 'gestor') {
+      return jsonError(res, 403, 'Permissão insuficiente.');
+    }
+
+    const employee = await registerCollaboratorByManager(input);
+    return jsonOk(res, { employee });
   } catch (error) {
     return jsonError(res, 400, error instanceof Error ? error.message : 'Falha ao registrar.');
   }

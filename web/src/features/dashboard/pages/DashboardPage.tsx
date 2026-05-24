@@ -73,6 +73,7 @@ export function DashboardPage({
             employees={employees}
             selectedEmployee={selectedEmployee}
             onSelectEmployee={setSelectedEmployeeId}
+            onRefresh={onRefresh}
             timeEntries={timeEntries}
             justifications={justifications}
             summary={summary}

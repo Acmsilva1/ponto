@@ -81,12 +81,6 @@ export default function App() {
     await refreshData(employee.accessRole);
   }
 
-  async function handleRegister(employee: Employee) {
-    setCurrentEmployee(employee);
-    setScreen(employee.mustChangePassword ? 'profile' : 'dashboard');
-    await refreshData(employee.accessRole);
-  }
-
   async function handleLogout() {
     await logout();
     setCurrentEmployee(null);
@@ -104,7 +98,7 @@ export default function App() {
   }
 
   if (!currentEmployee) {
-    return <LoginPage onLogin={handleLogin} onRegister={handleRegister} apiStatus={apiStatus} />;
+    return <LoginPage onLogin={handleLogin} apiStatus={apiStatus} />;
   }
 
   if (screen === 'profile') {
