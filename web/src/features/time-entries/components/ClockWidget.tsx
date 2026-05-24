@@ -2,14 +2,17 @@ import { Coffee, Clock3, LogIn, LogOut, RefreshCcw, ShieldCheck, X } from 'lucid
 import { useEffect, useMemo, useState } from 'react';
 import type { TimeEntryType } from '@shared/contracts';
 
+type OfficialTimeEntryType = Exclude<TimeEntryType, 'extra'>;
+
 interface ClockWidgetProps {
-  onClock: (type: TimeEntryType, justification: string) => Promise<void>;
+  onClock: (type: OfficialTimeEntryType, justification: string) => Promise<void>;
+  completedTypes?: Set<OfficialTimeEntryType>;
   disabled?: boolean;
   dark?: boolean;
 }
 
 const actions: Array<{
-  value: TimeEntryType;
+  value: OfficialTimeEntryType;
   label: string;
   description: string;
   icon: typeof LogIn;
@@ -40,12 +43,13 @@ function formatBrasiliaDate(date: Date) {
   }).format(date);
 }
 
-export function ClockWidget({ onClock, disabled, dark = true }: ClockWidgetProps) {
+export function ClockWidget({ onClock, completedTypes, disabled, dark = true }: ClockWidgetProps) {
   const [now, setNow] = useState(() => new Date());
   const [justification, setJustification] = useState('');
-  const [selectedType, setSelectedType] = useState<TimeEntryType>('entrada');
+  const [selectedType, setSelectedType] = useState<OfficialTimeEntryType>('entrada');
   const [loading, setLoading] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [feedback, setFeedback] = useState('');
 
   useEffect(() => {
     const interval = window.setInterval(() => setNow(new Date()), 1000);
@@ -56,13 +60,30 @@ export function ClockWidget({ onClock, disabled, dark = true }: ClockWidgetProps
     () => actions.find((action) => action.value === selectedType) || actions[0],
     [selectedType]
   );
+  const completedCount = completedTypes?.size ?? 0;
+  const selectedActionBlocked = completedTypes?.has(selectedType) ?? false;
+  const allActionsCompleted = completedCount >= actions.length;
+
+  useEffect(() => {
+    if (!completedTypes || completedTypes.size === 0) {
+      return;
+    }
+
+    if (completedTypes.has(selectedType)) {
+      const nextAvailableAction = actions.find((action) => !completedTypes.has(action.value));
+      setSelectedType(nextAvailableAction?.value || actions[0].value);
+    }
+  }, [completedTypes, selectedType]);
 
   async function confirmClock() {
     setLoading(true);
+    setFeedback('');
     try {
       await onClock(selectedType, justification);
       setJustification('');
       setConfirmOpen(false);
+    } catch (error) {
+      setFeedback(error instanceof Error ? error.message : 'Falha ao registrar ponto.');
     } finally {
       setLoading(false);
     }
@@ -110,7 +131,7 @@ export function ClockWidget({ onClock, disabled, dark = true }: ClockWidgetProps
                 <button
                   key={action.value}
                   type="button"
-                  disabled={disabled || loading}
+                  disabled={disabled || loading || completedTypes?.has(action.value)}
                   onClick={() => setSelectedType(action.value)}
                   className={`group flex flex-col items-center justify-start gap-3 rounded-[1.5rem] border px-3 py-4 text-center transition disabled:cursor-not-allowed disabled:opacity-60 ${
                     active
@@ -160,8 +181,11 @@ export function ClockWidget({ onClock, disabled, dark = true }: ClockWidgetProps
 
           <button
             type="button"
-            disabled={disabled || loading}
-            onClick={() => setConfirmOpen(true)}
+            disabled={disabled || loading || selectedActionBlocked || allActionsCompleted}
+            onClick={() => {
+              setFeedback('');
+              setConfirmOpen(true);
+            }}
             className="mt-4 w-full rounded-[1.25rem] bg-gradient-to-r from-indigo-500 via-violet-500 to-cyan-500 px-4 py-3 text-sm font-bold text-white shadow-[0_18px_40px_rgba(79,70,229,0.35)] transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-60"
           >
             Confirmar registro
@@ -182,7 +206,10 @@ export function ClockWidget({ onClock, disabled, dark = true }: ClockWidgetProps
               </div>
               <button
                 type="button"
-                onClick={() => setConfirmOpen(false)}
+                onClick={() => {
+                  setFeedback('');
+                  setConfirmOpen(false);
+                }}
                 className="flex h-10 w-10 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.03] text-slate-300 transition hover:bg-white/[0.06]"
               >
                 <X className="h-4 w-4" />
@@ -195,12 +222,16 @@ export function ClockWidget({ onClock, disabled, dark = true }: ClockWidgetProps
                 O sistema vai registrar a marcação escolhida e enviar para a API.
               </div>
               {justification.trim() && <p className="mt-3 text-slate-400">Observação: {justification.trim()}</p>}
+              {feedback && <p className="mt-3 text-rose-300">{feedback}</p>}
             </div>
 
             <div className="mt-6 grid gap-3 sm:grid-cols-2">
               <button
                 type="button"
-                onClick={() => setConfirmOpen(false)}
+                onClick={() => {
+                  setFeedback('');
+                  setConfirmOpen(false);
+                }}
                 className="rounded-[1.25rem] border border-white/10 bg-white/[0.03] px-4 py-3 text-sm font-bold text-slate-100 transition hover:bg-white/[0.06]"
               >
                 Cancelar

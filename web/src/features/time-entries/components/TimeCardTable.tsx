@@ -9,7 +9,8 @@ const typeLabel: Record<string, string> = {
   entrada: 'Entrada',
   almoco_saida: 'Saída almoço',
   almoco_retorno: 'Retorno almoço',
-  saida: 'Saída'
+  saida: 'Saída',
+  extra: 'Extra'
 };
 
 export function TimeCardTable({ entries, dark = true }: TimeCardTableProps) {

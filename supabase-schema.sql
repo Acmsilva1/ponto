@@ -39,7 +39,7 @@ create table public.time_entries (
   id uuid primary key default gen_random_uuid(),
   employee_id uuid not null references public.employees (id) on delete cascade,
   timestamp timestamptz not null,
-  type text not null check (type in ('entrada', 'almoco_saida', 'almoco_retorno', 'saida')),
+  type text not null check (type in ('entrada', 'almoco_saida', 'almoco_retorno', 'saida', 'extra')),
   is_manual boolean not null default false,
   justification text,
   location jsonb,
