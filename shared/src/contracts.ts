@@ -1,5 +1,5 @@
 export type AccessRole = 'colaborador' | 'gestor';
-export type TimeEntryType = 'entrada' | 'almoco_saida' | 'almoco_retorno' | 'saida';
+export type TimeEntryType = 'entrada' | 'almoco_saida' | 'almoco_retorno' | 'saida' | 'extra';
 export type JustificationStatus = 'pending' | 'approved' | 'rejected';
 
 export interface Employee {

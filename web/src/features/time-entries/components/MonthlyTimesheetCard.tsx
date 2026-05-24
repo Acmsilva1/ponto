@@ -2,6 +2,8 @@ import { CalendarDays, ChevronDown } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import type { TimeEntry, TimeEntryType } from '@shared/contracts';
 
+type OfficialTimeEntryType = Exclude<TimeEntryType, 'extra'>;
+
 interface MonthlyTimesheetCardProps {
   entries: TimeEntry[];
   dark?: boolean;
@@ -11,10 +13,11 @@ const typeLabel: Record<TimeEntryType, string> = {
   entrada: 'Entrada',
   almoco_saida: 'Início do intervalo',
   almoco_retorno: 'Retorno do intervalo',
-  saida: 'Saída final'
+  saida: 'Saída final',
+  extra: 'Extra'
 };
 
-const typeOrder: TimeEntryType[] = ['entrada', 'almoco_saida', 'almoco_retorno', 'saida'];
+const typeOrder: OfficialTimeEntryType[] = ['entrada', 'almoco_saida', 'almoco_retorno', 'saida'];
 
 function getBrasiliaDateParts(date: Date) {
   const formatter = new Intl.DateTimeFormat('en-CA', {
@@ -87,26 +90,69 @@ export function MonthlyTimesheetCard({ entries, dark = true }: MonthlyTimesheetC
     [entries, selectedMonth]
   );
 
-  const rows = useMemo(() => {
-    const map = new Map<string, Record<TimeEntryType, string>>();
+  const officialMonthEntries = useMemo(() => monthEntries.filter((entry) => entry.type !== 'extra'), [monthEntries]);
+  const extraMonthEntries = useMemo(() => monthEntries.filter((entry) => entry.type === 'extra'), [monthEntries]);
 
-    for (const entry of monthEntries) {
+  const extraGroups = useMemo(() => {
+    const map = new Map<string, string[]>();
+
+    for (const entry of extraMonthEntries) {
+      const dateKey = getBrasiliaDateKey(new Date(entry.timestamp));
+      const times = map.get(dateKey) || [];
+      times.push(getBrasiliaTime(new Date(entry.timestamp)));
+      map.set(dateKey, times);
+    }
+
+    return [...map.entries()]
+      .map(([dateKey, times]) => ({ dateKey, times }))
+      .sort((left, right) => right.dateKey.localeCompare(left.dateKey));
+  }, [extraMonthEntries]);
+
+  const uniqueMonthEntries = useMemo(() => {
+    const map = new Map<string, TimeEntry>();
+
+    for (const entry of officialMonthEntries) {
+      const dateKey = getBrasiliaDateKey(new Date(entry.timestamp));
+      map.set(`${dateKey}-${entry.type}`, entry);
+    }
+
+    return [...map.values()].sort((left, right) => left.timestamp.localeCompare(right.timestamp));
+  }, [officialMonthEntries]);
+
+  const rows = useMemo(() => {
+    const map = new Map<string, Record<OfficialTimeEntryType, string> & { extra: string[] }>();
+
+    for (const entry of uniqueMonthEntries) {
       const dateKey = getBrasiliaDateKey(new Date(entry.timestamp));
       const current = map.get(dateKey) || {
         entrada: '-',
         almoco_saida: '-',
         almoco_retorno: '-',
-        saida: '-'
+        saida: '-',
+        extra: []
       };
 
-      current[entry.type] = getBrasiliaTime(new Date(entry.timestamp));
+      current[entry.type as OfficialTimeEntryType] = getBrasiliaTime(new Date(entry.timestamp));
+      map.set(dateKey, current);
+    }
+
+    for (const { dateKey, times } of extraGroups) {
+      const current = map.get(dateKey) || {
+        entrada: '-',
+        almoco_saida: '-',
+        almoco_retorno: '-',
+        saida: '-',
+        extra: []
+      };
+
+      current.extra = times;
       map.set(dateKey, current);
     }
 
     return [...map.entries()]
       .map(([dateKey, value]) => ({ dateKey, value }))
       .sort((left, right) => right.dateKey.localeCompare(left.dateKey));
-  }, [monthEntries]);
+  }, [extraGroups, uniqueMonthEntries]);
 
   const currentLabel = getMonthLabel(selectedMonth);
 
@@ -123,9 +169,7 @@ export function MonthlyTimesheetCard({ entries, dark = true }: MonthlyTimesheetC
               Folha de ponto
             </p>
             <h3 className={`mt-2 text-xl font-black ${dark ? 'text-white' : 'text-slate-900'}`}>Consulta mensal</h3>
-            <p className={`mt-1 text-sm ${dark ? 'text-slate-400' : 'text-slate-500'}`}>
-              Visualização consolidada por mês
-            </p>
+            <p className={`mt-1 text-sm ${dark ? 'text-slate-400' : 'text-slate-500'}`}>Visualização consolidada por mês</p>
           </div>
 
           <label
@@ -157,7 +201,8 @@ export function MonthlyTimesheetCard({ entries, dark = true }: MonthlyTimesheetC
 
       <div className="p-5">
         <p className={`mb-4 text-sm ${dark ? 'text-slate-400' : 'text-slate-500'}`}>
-          {currentLabel} • {rows.length} dias com marcação • {monthEntries.length} batidas no período
+          {currentLabel} • {rows.length} dias com marcação • {uniqueMonthEntries.length} batidas oficiais no período
+          {extraMonthEntries.length > 0 ? ` • ${extraMonthEntries.length} extras` : ''}
         </p>
 
         {rows.length === 0 ? (
@@ -178,6 +223,7 @@ export function MonthlyTimesheetCard({ entries, dark = true }: MonthlyTimesheetC
                   <th className="px-4 py-3 text-[11px] font-semibold uppercase tracking-[0.18em]">Intervalo</th>
                   <th className="px-4 py-3 text-[11px] font-semibold uppercase tracking-[0.18em]">Retorno</th>
                   <th className="px-4 py-3 text-[11px] font-semibold uppercase tracking-[0.18em]">Saída</th>
+                  <th className="px-4 py-3 text-[11px] font-semibold uppercase tracking-[0.18em]">Extra</th>
                 </tr>
               </thead>
               <tbody className={`divide-y ${dark ? 'divide-white/10 bg-slate-950/50' : 'divide-slate-100 bg-white'}`}>
@@ -204,6 +250,31 @@ export function MonthlyTimesheetCard({ entries, dark = true }: MonthlyTimesheetC
                         </span>
                       </td>
                     ))}
+
+                    <td className="px-4 py-4">
+                      {value.extra.length === 0 ? (
+                        <span
+                          className={`inline-flex rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] ${
+                            dark ? 'bg-white/[0.04] text-slate-500' : 'bg-slate-100 text-slate-400'
+                          }`}
+                        >
+                          -
+                        </span>
+                      ) : (
+                        <div className="flex flex-wrap gap-2">
+                          {value.extra.map((time, index) => (
+                            <span
+                              key={`${dateKey}-extra-${time}-${index}`}
+                              className={`inline-flex rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] ${
+                                dark ? 'bg-amber-500/20 text-amber-100' : 'bg-amber-50 text-amber-700'
+                              }`}
+                            >
+                              {time}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </td>
                   </tr>
                 ))}
               </tbody>

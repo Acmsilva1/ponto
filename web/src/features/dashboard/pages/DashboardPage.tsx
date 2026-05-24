@@ -7,6 +7,8 @@ import { createTimeEntry } from '../../time-entries/services/timeEntriesService.
 import { createJustification } from '../../justifications/services/justificationsService.js';
 import type { TimeEntryType } from '@shared/contracts';
 
+type OfficialTimeEntryType = Exclude<TimeEntryType, 'extra'>;
+
 interface DashboardPageProps {
   employee: Employee;
   employees: Employee[];
@@ -16,6 +18,22 @@ interface DashboardPageProps {
   onRefresh: () => Promise<void>;
   onLogout: () => Promise<void> | void;
   onOpenProfile: () => void;
+}
+
+function getBrasiliaDateKey(date: Date) {
+  const formatter = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/Sao_Paulo',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  });
+
+  const parts = formatter.formatToParts(date);
+  const year = parts.find((part) => part.type === 'year')?.value || '0000';
+  const month = parts.find((part) => part.type === 'month')?.value || '00';
+  const day = parts.find((part) => part.type === 'day')?.value || '00';
+
+  return `${year}-${month}-${day}`;
 }
 
 export function DashboardPage({
@@ -33,6 +51,34 @@ export function DashboardPage({
     () => employees.find((item) => item.id === selectedEmployeeId) || employee,
     [employees, employee, selectedEmployeeId]
   );
+  const collaboratorEntries = useMemo(() => timeEntries.filter((entry) => entry.employeeId === employee.id), [employee.id, timeEntries]);
+  const collaboratorTodayOfficialEntries = useMemo(() => {
+    const todayKey = getBrasiliaDateKey(new Date());
+    const map = new Map<OfficialTimeEntryType, TimeEntry>();
+
+    for (const entry of collaboratorEntries) {
+      if (entry.type === 'extra') {
+        continue;
+      }
+
+      if (getBrasiliaDateKey(new Date(entry.timestamp)) !== todayKey) {
+        continue;
+      }
+
+      if (!map.has(entry.type)) {
+        map.set(entry.type as OfficialTimeEntryType, entry);
+      }
+    }
+
+    return [...map.values()].sort((left, right) => left.timestamp.localeCompare(right.timestamp));
+  }, [collaboratorEntries]);
+  const collaboratorTodayExtraEntries = useMemo(() => {
+    const todayKey = getBrasiliaDateKey(new Date());
+
+    return collaboratorEntries
+      .filter((entry) => entry.type === 'extra' && getBrasiliaDateKey(new Date(entry.timestamp)) === todayKey)
+      .sort((left, right) => left.timestamp.localeCompare(right.timestamp));
+  }, [collaboratorEntries]);
 
   useEffect(() => {
     if (employee.accessRole === 'gestor') {
@@ -48,8 +94,15 @@ export function DashboardPage({
     }
   }, [employee.accessRole, employee.id, employees, selectedEmployeeId]);
 
-  const collaboratorEntries = timeEntries.filter((entry) => entry.employeeId === employee.id);
-  async function handleClock(type: TimeEntryType, justification: string) {
+  async function handleOfficialClock(type: OfficialTimeEntryType, justification: string) {
+    if (collaboratorTodayOfficialEntries.some((entry) => entry.type === type)) {
+      throw new Error('Este tipo de marcação já foi registrado hoje.');
+    }
+
+    if (collaboratorTodayOfficialEntries.length >= 4) {
+      throw new Error('Você já registrou as 4 marcações permitidas hoje.');
+    }
+
     await createTimeEntry({
       employeeId: employee.id,
       timestamp: new Date().toISOString(),
@@ -74,6 +127,19 @@ export function DashboardPage({
     await onRefresh();
   }
 
+  async function handleExtraClock() {
+    await createTimeEntry({
+      employeeId: employee.id,
+      timestamp: new Date().toISOString(),
+      type: 'extra',
+      isManual: false,
+      justification: null,
+      location: null
+    });
+
+    await onRefresh();
+  }
+
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100">
       <Navbar employee={employee} onLogout={onLogout} onOpenProfile={onOpenProfile} />
@@ -93,7 +159,10 @@ export function DashboardPage({
         ) : (
           <CollaboratorWorkspace
             timeEntries={collaboratorEntries}
-            onClock={handleClock}
+            officialEntries={collaboratorTodayOfficialEntries}
+            extraEntries={collaboratorTodayExtraEntries}
+            onClock={handleOfficialClock}
+            onClockExtra={handleExtraClock}
           />
         )}
       </main>
