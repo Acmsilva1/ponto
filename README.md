@@ -1,20 +1,21 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://ai.google.dev/static/site-assets/images/share-ais-513315318.png" />
-</div>
+# Ponto Digital
 
-# Run and deploy your AI Studio app
+Monorepo oficial da aplicação de ponto.
 
-This contains everything you need to run your app locally.
+## Estrutura
 
-View your app in AI Studio: https://ai.studio/apps/91fc9eba-f726-41bd-bc22-480c125b1214
+- `api/`: backend Node.js com MVC por feature
+- `web/`: frontend React
+- `shared/`: contratos comuns
+- `docs/`: documentação do projeto e agentes
 
-## Run Locally
+## Comandos
 
-**Prerequisites:**  Node.js
+- `npm run dev:web`
+- `npm run dev:api`
+- `npm run build`
 
+## Banco
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+O schema oficial fica em `api/sql/schema.sql`.
+
