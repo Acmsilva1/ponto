@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { Employee, Justification, TimeEntry, DashboardSummary } from '@shared/contracts';
 import { Navbar } from '../../layout/components/Navbar.js';
 import { CollaboratorWorkspace } from '../components/CollaboratorWorkspace.js';
@@ -33,6 +33,20 @@ export function DashboardPage({
     () => employees.find((item) => item.id === selectedEmployeeId) || employee,
     [employees, employee, selectedEmployeeId]
   );
+
+  useEffect(() => {
+    if (employee.accessRole === 'gestor') {
+      const nextSelectedId = employees.find((item) => item.id === selectedEmployeeId)?.id || employees[0]?.id || '';
+      if (nextSelectedId && nextSelectedId !== selectedEmployeeId) {
+        setSelectedEmployeeId(nextSelectedId);
+      }
+      return;
+    }
+
+    if (selectedEmployeeId !== employee.id) {
+      setSelectedEmployeeId(employee.id);
+    }
+  }, [employee.accessRole, employee.id, employees, selectedEmployeeId]);
 
   const collaboratorEntries = timeEntries.filter((entry) => entry.employeeId === employee.id);
   const collaboratorJustifications = justifications.filter((item) => item.employeeId === employee.id);

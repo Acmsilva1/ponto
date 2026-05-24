@@ -1,8 +1,8 @@
-import { useMemo, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import type { EChartsOption } from 'echarts';
 import type { DashboardSummary, Employee, Justification, TimeEntry } from '@shared/contracts';
+import { deleteEmployee, updateEmployee } from '../../employees/services/employeesService.js';
 import { registerCollaboratorByManager } from '../../auth/services/authService.js';
-import { EmployeeSelector } from '../../employees/components/EmployeeSelector.js';
 import { TimeCardTable } from '../../time-entries/components/TimeCardTable.js';
 import { EChartCard } from './EChartCard.js';
 
@@ -35,14 +35,32 @@ export function ManagerWorkspace({
   justifications,
   summary
 }: ManagerWorkspaceProps) {
+  const [showRegisterModal, setShowRegisterModal] = useState(false);
+  const [showEmployeesModal, setShowEmployeesModal] = useState(false);
   const [newName, setNewName] = useState('');
   const [newRole, setNewRole] = useState('');
   const [newRegistryId, setNewRegistryId] = useState('');
   const [registerBusy, setRegisterBusy] = useState(false);
   const [registerFeedback, setRegisterFeedback] = useState('');
+  const [employeeFeedback, setEmployeeFeedback] = useState('');
+  const [editMode, setEditMode] = useState(false);
+  const [editName, setEditName] = useState('');
+  const [editRole, setEditRole] = useState('');
+  const [editRegistryId, setEditRegistryId] = useState('');
+  const [employeeBusy, setEmployeeBusy] = useState(false);
+
+  useEffect(() => {
+    setEditName(selectedEmployee.name || '');
+    setEditRole(selectedEmployee.role || '');
+    setEditRegistryId(selectedEmployee.registryId || '');
+    setEditMode(false);
+    setEmployeeFeedback('');
+  }, [selectedEmployee.id, selectedEmployee.name, selectedEmployee.role, selectedEmployee.registryId]);
 
   const chartData = useMemo(() => {
-    const byEmployee = employees
+    const collaboratorsOnly = employees.filter((item) => !item.isMaster);
+
+    const byEmployee = collaboratorsOnly
       .map((item) => ({
         name: item.name.split(' ')[0],
         value: timeEntries.filter((entry) => entry.employeeId === item.id).length
@@ -74,7 +92,7 @@ export function ManagerWorkspace({
       { name: 'Saída', value: timeEntries.filter((item) => item.type === 'saida').length }
     ];
 
-    return { byEmployee, lastDays, statusTotals, typeTotals };
+    return { byEmployee, lastDays, statusTotals, typeTotals, collaboratorsOnly };
   }, [employees, justifications, timeEntries]);
 
   const activityOption = useMemo<EChartsOption>(
@@ -191,9 +209,6 @@ export function ManagerWorkspace({
     [chartData.typeTotals]
   );
 
-  const selectedEntries = timeEntries.filter((entry) => entry.employeeId === selectedEmployee.id);
-  const selectedJustifications = justifications.filter((item) => item.employeeId === selectedEmployee.id);
-
   async function handleRegisterCollaborator(event: FormEvent) {
     event.preventDefault();
     setRegisterBusy(true);
@@ -217,6 +232,45 @@ export function ManagerWorkspace({
     }
   }
 
+  async function handleSaveEmployee() {
+    setEmployeeBusy(true);
+    setEmployeeFeedback('');
+    try {
+      const result = await updateEmployee(selectedEmployee.id, {
+        name: editName.trim(),
+        role: editRole.trim(),
+        registryId: editRegistryId.trim()
+      });
+      onSelectEmployee(result.employee.id);
+      await onRefresh();
+      setEmployeeFeedback('Colaborador atualizado com sucesso.');
+    } catch (error) {
+      setEmployeeFeedback(error instanceof Error ? error.message : 'Falha ao atualizar colaborador.');
+    } finally {
+      setEmployeeBusy(false);
+    }
+  }
+
+  async function handleDeleteEmployee() {
+    if (!window.confirm(`Excluir ${selectedEmployee.name}? Essa ação não pode ser desfeita.`)) {
+      return;
+    }
+
+    setEmployeeBusy(true);
+    setEmployeeFeedback('');
+    try {
+      await deleteEmployee(selectedEmployee.id);
+      const remaining = employees.filter((item) => item.id !== selectedEmployee.id && !item.isMaster);
+      onSelectEmployee(remaining[0]?.id || '');
+      await onRefresh();
+      setEmployeeFeedback('Colaborador excluído com sucesso.');
+    } catch (error) {
+      setEmployeeFeedback(error instanceof Error ? error.message : 'Falha ao excluir colaborador.');
+    } finally {
+      setEmployeeBusy(false);
+    }
+  }
+
   return (
     <section className="space-y-6">
       <section className="rounded-[2rem] border border-white/10 bg-slate-950/80 p-6 shadow-[0_24px_80px_rgba(2,6,23,0.45)]">
@@ -225,65 +279,134 @@ export function ManagerWorkspace({
             <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-indigo-300/80">Gestor</p>
             <h2 className="mt-2 text-3xl font-black tracking-tight text-white">Olá, {employee.name}</h2>
             <p className="mt-3 max-w-2xl text-sm leading-7 text-slate-400">
-              Aqui você acompanha o coletivo: volume de batidas, justificativas, evolução diária e comparação entre colaboradores.
+              Aqui você acompanha o coletivo sem confundir seu perfil com a equipe.
             </p>
           </div>
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            <div className="rounded-[1.5rem] border border-white/10 bg-white/5 px-5 py-4">
               <p className="text-[11px] uppercase tracking-[0.2em] text-slate-400">Colaboradores</p>
-              <p className="mt-1 text-2xl font-black text-white">{summary.employeesCount}</p>
+              <p className="mt-2 text-3xl font-black text-white">{summary.employeesCount}</p>
             </div>
-            <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
+            <div className="rounded-[1.5rem] border border-white/10 bg-white/5 px-5 py-4">
               <p className="text-[11px] uppercase tracking-[0.2em] text-slate-400">Batidas</p>
-              <p className="mt-1 text-2xl font-black text-white">{summary.timeEntriesCount}</p>
+              <p className="mt-2 text-3xl font-black text-white">{summary.timeEntriesCount}</p>
             </div>
-            <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
+            <div className="rounded-[1.5rem] border border-white/10 bg-white/5 px-5 py-4">
               <p className="text-[11px] uppercase tracking-[0.2em] text-slate-400">Justificativas</p>
-              <p className="mt-1 text-2xl font-black text-white">{summary.justificationsCount}</p>
+              <p className="mt-2 text-3xl font-black text-white">{summary.justificationsCount}</p>
             </div>
-            <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
+            <div className="rounded-[1.5rem] border border-white/10 bg-white/5 px-5 py-4">
               <p className="text-[11px] uppercase tracking-[0.2em] text-slate-400">Pendências</p>
-              <p className="mt-1 text-2xl font-black text-white">{summary.pendingJustificationsCount}</p>
+              <p className="mt-2 text-3xl font-black text-white">{summary.pendingJustificationsCount}</p>
             </div>
           </div>
         </div>
       </section>
 
-      <div className="grid gap-6 xl:grid-cols-[340px_1fr]">
-        <div className="space-y-6">
-          <section className="rounded-[1.75rem] border border-indigo-400/20 bg-indigo-500/10 p-5">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-indigo-100/80">Cadastro administrativo</p>
-            <h3 className="mt-2 text-2xl font-black text-white">Novo colaborador</h3>
-            <p className="mt-2 text-sm leading-6 text-indigo-50/80">
-              Cadastre pessoas para registrar ponto. A senha padrão é <span className="font-bold text-white">12345</span> e o sistema exigirá troca no primeiro acesso.
-            </p>
+      <div className="grid gap-6">
+        <div className="grid gap-4 xl:grid-cols-2">
+          <EChartCard title="Volume diário" description="Batidas acumuladas nos últimos 7 dias." option={activityOption} height={320} />
+          <EChartCard
+            title="Justificativas"
+            description="Distribuição entre pendentes, aprovadas e rejeitadas."
+            option={statusOption}
+            height={320}
+          />
+        </div>
 
-            <form onSubmit={handleRegisterCollaborator} className="mt-5 space-y-3">
+        <div className="grid gap-4 xl:grid-cols-[1.35fr_0.65fr]">
+          <EChartCard title="Batidas por tipo" description="Comparativo entre entrada, almoço e saída." option={typeOption} height={340} />
+          <EChartCard
+            title="Top colaboradores"
+            description="Quem mais registrou ponto no período."
+            option={employeeOption}
+            height={340}
+          />
+        </div>
+
+        <section className="grid gap-4 rounded-[1.75rem] border border-white/10 bg-slate-950/80 p-5 xl:grid-cols-[1fr_auto] xl:items-center">
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-400">Atalhos administrativos</p>
+            <h3 className="mt-2 text-2xl font-black text-white">Gerenciar colaboradores</h3>
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-400">
+              Abra os modais abaixo para cadastrar, consultar, editar ou excluir colaboradores.
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-3">
+            <button
+              type="button"
+              onClick={() => setShowRegisterModal(true)}
+              className="rounded-full bg-gradient-to-r from-indigo-500 via-violet-500 to-cyan-500 px-5 py-3 text-sm font-bold text-white shadow-[0_18px_40px_rgba(79,70,229,0.35)] transition hover:-translate-y-0.5"
+            >
+              Cadastrar colaborador
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowEmployeesModal(true)}
+              className="rounded-full border border-white/10 bg-white/[0.03] px-5 py-3 text-sm font-bold text-slate-100 transition hover:-translate-y-0.5 hover:bg-white/[0.06]"
+            >
+              Ver colaboradores
+            </button>
+          </div>
+        </section>
+      </div>
+
+      {showRegisterModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/85 px-4 backdrop-blur-sm">
+          <div className="w-full max-w-lg rounded-[2rem] border border-white/10 bg-slate-950 p-6 shadow-[0_30px_120px_rgba(2,6,23,0.6)]">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-indigo-300/80">Cadastro administrativo</p>
+                <h3 className="mt-2 text-2xl font-black text-white">Novo colaborador</h3>
+                <p className="mt-2 text-sm text-slate-400">
+                  A senha padrão é <span className="font-bold text-white">12345</span> e a troca será obrigatória no primeiro acesso.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowRegisterModal(false)}
+                className="rounded-2xl border border-white/10 bg-white/[0.03] px-3 py-2 text-sm text-slate-300 transition hover:bg-white/[0.06]"
+              >
+                Fechar
+              </button>
+            </div>
+
+            <form onSubmit={handleRegisterCollaborator} className="mt-6 space-y-3">
               <input
                 value={newName}
                 onChange={(e) => setNewName(e.target.value)}
                 placeholder="Nome completo"
-                className="w-full rounded-[1.25rem] border border-white/10 bg-slate-950/70 px-4 py-3 text-sm text-slate-100 outline-none transition placeholder:text-slate-500 focus:border-indigo-400"
+                className="w-full rounded-[1.25rem] border border-white/10 bg-white/[0.03] px-4 py-3 text-sm text-slate-100 outline-none transition placeholder:text-slate-500 focus:border-indigo-400"
               />
               <input
                 value={newRole}
                 onChange={(e) => setNewRole(e.target.value)}
                 placeholder="Função"
-                className="w-full rounded-[1.25rem] border border-white/10 bg-slate-950/70 px-4 py-3 text-sm text-slate-100 outline-none transition placeholder:text-slate-500 focus:border-indigo-400"
+                className="w-full rounded-[1.25rem] border border-white/10 bg-white/[0.03] px-4 py-3 text-sm text-slate-100 outline-none transition placeholder:text-slate-500 focus:border-indigo-400"
               />
               <input
                 value={newRegistryId}
                 onChange={(e) => setNewRegistryId(e.target.value)}
                 placeholder="Matrícula"
-                className="w-full rounded-[1.25rem] border border-white/10 bg-slate-950/70 px-4 py-3 text-sm text-slate-100 outline-none transition placeholder:text-slate-500 focus:border-indigo-400"
+                className="w-full rounded-[1.25rem] border border-white/10 bg-white/[0.03] px-4 py-3 text-sm text-slate-100 outline-none transition placeholder:text-slate-500 focus:border-indigo-400"
               />
-              <button
-                type="submit"
-                disabled={registerBusy}
-                className="w-full rounded-[1.25rem] bg-white px-4 py-3 text-sm font-bold text-slate-950 transition hover:-translate-y-0.5 hover:bg-slate-200 disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {registerBusy ? 'Cadastrando...' : 'Cadastrar colaborador'}
-              </button>
+
+              <div className="flex gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowRegisterModal(false)}
+                  className="flex-1 rounded-[1.25rem] border border-white/10 bg-white/[0.03] px-4 py-3 text-sm font-bold text-slate-100 transition hover:bg-white/[0.06]"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={registerBusy}
+                  className="flex-1 rounded-[1.25rem] bg-white px-4 py-3 text-sm font-bold text-slate-950 transition hover:bg-slate-200 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {registerBusy ? 'Cadastrando...' : 'Cadastrar'}
+                </button>
+              </div>
             </form>
 
             {registerFeedback && (
@@ -291,79 +414,161 @@ export function ManagerWorkspace({
                 {registerFeedback}
               </div>
             )}
-          </section>
+          </div>
+        </div>
+      )}
 
-          <EmployeeSelector employees={employees} selectedId={selectedEmployee.id} onSelect={onSelectEmployee} dark />
-
-          <section className="rounded-[1.75rem] border border-white/10 bg-slate-950/80 p-5">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-400">Colaborador selecionado</p>
-            <h3 className="mt-2 text-2xl font-black text-white">{selectedEmployee.name}</h3>
-            <p className="mt-2 text-sm leading-6 text-slate-400">{selectedEmployee.department}</p>
-            <div className="mt-5 grid grid-cols-2 gap-3 text-sm">
-              <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
-                <p className="text-[10px] uppercase tracking-[0.18em] text-slate-400">Cargo</p>
-                <p className="mt-1 font-semibold text-white">{selectedEmployee.role}</p>
+      {showEmployeesModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/85 px-4 backdrop-blur-sm">
+          <div className="flex h-[82vh] w-full max-w-6xl flex-col overflow-hidden rounded-[2rem] border border-white/10 bg-slate-950 shadow-[0_30px_120px_rgba(2,6,23,0.6)]">
+            <div className="flex items-center justify-between gap-4 border-b border-white/10 px-6 py-5">
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-indigo-300/80">Colaboradores</p>
+                <h3 className="mt-2 text-2xl font-black text-white">Lista e edição</h3>
               </div>
-              <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
-                <p className="text-[10px] uppercase tracking-[0.18em] text-slate-400">Perfil</p>
-                <p className="mt-1 font-semibold text-white">{selectedEmployee.accessRole}</p>
-              </div>
+              <button
+                type="button"
+                onClick={() => setShowEmployeesModal(false)}
+                className="rounded-2xl border border-white/10 bg-white/[0.03] px-3 py-2 text-sm text-slate-300 transition hover:bg-white/[0.06]"
+              >
+                Fechar
+              </button>
             </div>
-          </section>
 
-          <TimeCardTable entries={selectedEntries.slice(0, 8)} dark />
-
-          <section className="rounded-[1.75rem] border border-white/10 bg-slate-950/80 p-5">
-            <h3 className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-100">Justificativas do colaborador</h3>
-            <div className="mt-4 space-y-3">
-              {selectedJustifications.length === 0 ? (
-                <p className="rounded-2xl border border-dashed border-white/10 bg-white/[0.02] p-5 text-sm text-slate-400">
-                  Nenhuma justificativa encontrada.
-                </p>
-              ) : (
-                selectedJustifications.slice(0, 5).map((item) => (
-                  <article key={item.id} className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
-                    <div className="flex items-center justify-between gap-3">
-                      <p className="font-semibold text-white">{item.reason}</p>
-                      <span className="rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-300">
-                        {item.status}
-                      </span>
+            <div className="grid min-h-0 flex-1 gap-0 lg:grid-cols-[0.42fr_0.58fr]">
+              <aside className="min-h-0 overflow-y-auto border-b border-white/10 p-4 lg:border-b-0 lg:border-r">
+                <div className="space-y-2">
+                  {chartData.collaboratorsOnly.length === 0 ? (
+                    <div className="rounded-[1.25rem] border border-dashed border-white/10 bg-white/[0.03] p-6 text-center text-sm text-slate-400">
+                      Nenhum colaborador encontrado.
                     </div>
-                    <p className="mt-2 text-xs text-slate-400">{item.date}</p>
-                  </article>
-                ))
-              )}
+                  ) : (
+                    chartData.collaboratorsOnly.map((item) => {
+                      const active = item.id === selectedEmployee.id;
+                      return (
+                        <button
+                          key={item.id}
+                          type="button"
+                          onClick={() => onSelectEmployee(item.id)}
+                          className={`w-full rounded-[1.25rem] border px-4 py-4 text-left transition ${
+                            active
+                              ? 'border-indigo-400/40 bg-indigo-500/15'
+                              : 'border-white/10 bg-white/[0.03] hover:border-white/20 hover:bg-white/[0.06]'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between gap-3">
+                            <div>
+                              <p className="text-sm font-semibold text-white">{item.name}</p>
+                              <p className="mt-1 text-xs text-slate-400">{item.role}</p>
+                            </div>
+                            <span className="text-[10px] uppercase tracking-[0.18em] text-slate-400">{item.registryId}</span>
+                          </div>
+                        </button>
+                      );
+                    })
+                  )}
+                </div>
+              </aside>
+
+              <section className="min-h-0 overflow-y-auto p-6">
+                <div className="rounded-[1.5rem] border border-white/10 bg-white/[0.03] p-5">
+                  <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                    <div>
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-400">Colaborador selecionado</p>
+                      <h4 className="mt-2 text-3xl font-black text-white">{selectedEmployee.name}</h4>
+                      <p className="mt-2 text-sm text-slate-400">
+                        Matrícula: {selectedEmployee.registryId}
+                      </p>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setEditMode((current) => !current)}
+                        className="rounded-full border border-white/10 bg-white/[0.03] px-4 py-2 text-sm font-semibold text-slate-100 transition hover:bg-white/[0.06]"
+                      >
+                        {editMode ? 'Fechar edição' : 'Editar'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleDeleteEmployee}
+                        disabled={employeeBusy || selectedEmployee.isMaster}
+                        className="rounded-full border border-rose-400/20 bg-rose-500/10 px-4 py-2 text-sm font-semibold text-rose-100 transition hover:bg-rose-500/20 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        Excluir
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="mt-6 grid gap-3 sm:grid-cols-2">
+                    <div className="rounded-[1.25rem] border border-white/10 bg-slate-950/70 p-4">
+                      <p className="text-[10px] uppercase tracking-[0.18em] text-slate-400">Função</p>
+                      <p className="mt-1 text-sm font-semibold text-white">{selectedEmployee.role}</p>
+                    </div>
+                    <div className="rounded-[1.25rem] border border-white/10 bg-slate-950/70 p-4">
+                      <p className="text-[10px] uppercase tracking-[0.18em] text-slate-400">Setor</p>
+                      <p className="mt-1 text-sm font-semibold text-white">{selectedEmployee.department}</p>
+                    </div>
+                  </div>
+
+                  <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                    <div className="rounded-[1.25rem] border border-white/10 bg-slate-950/70 p-4">
+                      <p className="text-[10px] uppercase tracking-[0.18em] text-slate-400">Perfil</p>
+                      <p className="mt-1 text-sm font-semibold text-white">{selectedEmployee.accessRole}</p>
+                    </div>
+                    <div className="rounded-[1.25rem] border border-white/10 bg-slate-950/70 p-4">
+                      <p className="text-[10px] uppercase tracking-[0.18em] text-slate-400">Troca obrigatória</p>
+                      <p className="mt-1 text-sm font-semibold text-white">{selectedEmployee.mustChangePassword ? 'Sim' : 'Não'}</p>
+                    </div>
+                  </div>
+
+                  {editMode && (
+                    <div className="mt-6 rounded-[1.5rem] border border-indigo-400/20 bg-indigo-500/10 p-5">
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-indigo-100/80">Editar colaborador</p>
+                      <div className="mt-4 grid gap-3">
+                        <input
+                          value={editName}
+                          onChange={(e) => setEditName(e.target.value)}
+                          placeholder="Nome completo"
+                          className="w-full rounded-[1.25rem] border border-white/10 bg-slate-950/70 px-4 py-3 text-sm text-slate-100 outline-none transition placeholder:text-slate-500 focus:border-indigo-400"
+                        />
+                        <input
+                          value={editRole}
+                          onChange={(e) => setEditRole(e.target.value)}
+                          placeholder="Função"
+                          className="w-full rounded-[1.25rem] border border-white/10 bg-slate-950/70 px-4 py-3 text-sm text-slate-100 outline-none transition placeholder:text-slate-500 focus:border-indigo-400"
+                        />
+                        <input
+                          value={editRegistryId}
+                          onChange={(e) => setEditRegistryId(e.target.value)}
+                          placeholder="Matrícula"
+                          className="w-full rounded-[1.25rem] border border-white/10 bg-slate-950/70 px-4 py-3 text-sm text-slate-100 outline-none transition placeholder:text-slate-500 focus:border-indigo-400"
+                        />
+                      </div>
+
+                      <div className="mt-4 flex gap-3">
+                        <button
+                          type="button"
+                          onClick={handleSaveEmployee}
+                          disabled={employeeBusy}
+                          className="rounded-full bg-white px-5 py-3 text-sm font-bold text-slate-950 transition hover:bg-slate-200 disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                          {employeeBusy ? 'Salvando...' : 'Salvar alterações'}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {employeeFeedback && (
+                    <div className="mt-4 rounded-[1.25rem] border border-white/10 bg-white/[0.05] p-4 text-sm text-slate-100">
+                      {employeeFeedback}
+                    </div>
+                  )}
+                </div>
+              </section>
             </div>
-          </section>
-        </div>
-
-        <div className="space-y-6">
-          <div className="grid gap-4 lg:grid-cols-2">
-            <EChartCard title="Volume diário" description="Batidas acumuladas nos últimos 7 dias." option={activityOption} height={300} />
-            <EChartCard
-              title="Justificativas"
-              description="Distribuição entre pendentes, aprovadas e rejeitadas."
-              option={statusOption}
-              height={300}
-            />
-          </div>
-
-          <div className="grid gap-4 xl:grid-cols-[1.25fr_0.75fr]">
-            <EChartCard
-              title="Batidas por tipo"
-              description="Comparativo entre entrada, almoço e saída."
-              option={typeOption}
-              height={340}
-            />
-            <EChartCard
-              title="Top colaboradores"
-              description="Quem mais registrou ponto no período."
-              option={employeeOption}
-              height={340}
-            />
           </div>
         </div>
-      </div>
+      )}
     </section>
   );
 }

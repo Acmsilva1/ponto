@@ -24,7 +24,8 @@ function mapEmployee(row: any): EmployeeWithAuth {
 export async function listEmployees(): Promise<EmployeeWithAuth[]> {
   const supabase = getSupabaseClient();
   if (!supabase) throw new Error('Supabase não configurado.');
-  const { data, error } = await supabase.from(TABLE).select('*').order('created_at', { ascending: true });
+
+  const { data, error } = await supabase.from(TABLE).select('*').eq('is_master', false).order('created_at', { ascending: true });
   if (error) throw new Error(error.message);
   return (data || []).map(mapEmployee);
 }
@@ -32,7 +33,36 @@ export async function listEmployees(): Promise<EmployeeWithAuth[]> {
 export async function findEmployeeById(id: string): Promise<EmployeeWithAuth | null> {
   const supabase = getSupabaseClient();
   if (!supabase) throw new Error('Supabase não configurado.');
+
   const { data, error } = await supabase.from(TABLE).select('*').eq('id', id).maybeSingle();
   if (error) throw new Error(error.message);
   return data ? mapEmployee(data) : null;
+}
+
+export async function updateEmployeeById(
+  id: string,
+  input: Partial<Pick<EmployeeWithAuth, 'name' | 'role' | 'registryId'>>
+): Promise<EmployeeWithAuth> {
+  const supabase = getSupabaseClient();
+  if (!supabase) throw new Error('Supabase não configurado.');
+
+  const payload: Record<string, unknown> = {
+    updated_at: new Date().toISOString()
+  };
+
+  if (input.name !== undefined) payload.name = input.name;
+  if (input.role !== undefined) payload.role = input.role;
+  if (input.registryId !== undefined) payload.registry_id = input.registryId.toUpperCase();
+
+  const { data, error } = await supabase.from(TABLE).update(payload).eq('id', id).select('*').single();
+  if (error) throw new Error(error.message);
+  return mapEmployee(data);
+}
+
+export async function deleteEmployeeById(id: string): Promise<void> {
+  const supabase = getSupabaseClient();
+  if (!supabase) throw new Error('Supabase não configurado.');
+
+  const { error } = await supabase.from(TABLE).delete().eq('id', id);
+  if (error) throw new Error(error.message);
 }
