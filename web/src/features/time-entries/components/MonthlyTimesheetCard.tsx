@@ -151,7 +151,8 @@ export function MonthlyTimesheetCard({
               <select
                 value={selectedMonth}
                 onChange={(event) => setSelectedMonth(event.target.value)}
-                className={`appearance-none rounded-xl border-0 bg-transparent pr-7 text-sm font-semibold outline-none ${
+                style={{ colorScheme: 'dark' }}
+                className={`appearance-none rounded-xl border-0 bg-slate-950/90 pr-7 text-sm font-semibold text-slate-100 outline-none ${
                   dark ? 'text-white' : 'text-slate-900'
                 }`}
               >
