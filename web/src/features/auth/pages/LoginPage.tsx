@@ -58,7 +58,7 @@ export function LoginPage({ onLogin, apiStatus }: LoginPageProps) {
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center px-4 py-6 text-slate-100 sm:px-6 lg:px-8">
+    <main className="flex min-h-screen items-center justify-center px-4 py-6 text-slate-100 sm:px-6 lg:px-8 bg-transparent">
       <div className="w-full max-w-2xl overflow-hidden rounded-[2.5rem] border border-white/10 bg-slate-950/85 shadow-[0_30px_120px_rgba(2,6,23,0.55)] backdrop-blur-xl">
         <div className="border-b border-white/10 px-8 py-8">
           <div className="inline-flex items-center gap-2 rounded-full border border-indigo-400/20 bg-indigo-500/10 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-indigo-200">

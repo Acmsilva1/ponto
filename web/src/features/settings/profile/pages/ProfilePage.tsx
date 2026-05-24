@@ -30,8 +30,8 @@ export function ProfilePage({ employee, onBackToDashboard, onLogout, onProfileUp
   }
 
   return (
-    <main className="min-h-screen bg-slate-950 text-slate-100">
-      <header className="border-b border-white/10 bg-slate-950/90 backdrop-blur-xl">
+    <main className="min-h-screen bg-transparent text-slate-100">
+      <header className="border-b border-white/10 bg-slate-900/60 backdrop-blur-xl">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-4 sm:px-6 lg:px-8">
           <div className="flex items-center gap-3">
             <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-500 via-violet-500 to-cyan-500 text-white">

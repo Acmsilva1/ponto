@@ -174,7 +174,7 @@ export function DashboardPage({
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100">
+    <div className="min-h-screen bg-transparent text-slate-100">
       <Navbar employee={employee} onLogout={onLogout} onOpenProfile={onOpenProfile} />
 
       <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
