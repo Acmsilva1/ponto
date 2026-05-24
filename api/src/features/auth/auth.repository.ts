@@ -35,6 +35,28 @@ export async function findEmployeeByRegistryId(registryId: string): Promise<Empl
   return data ? mapEmployee(data) : null;
 }
 
+export async function findEmployeeByName(name: string): Promise<EmployeeWithAuth | null> {
+  const supabase = getSupabaseClient();
+  if (!supabase) throw new Error('Supabase não configurado.');
+
+  const normalizedName = name.trim().replace(/\s+/g, ' ');
+  const { data, error } = await supabase
+    .from(TABLE)
+    .select('*')
+    .ilike('name', normalizedName)
+    .limit(2);
+
+  if (error) throw new Error(error.message);
+  return data?.length === 1 ? mapEmployee(data[0]) : null;
+}
+
+export async function findEmployeeByLoginIdentifier(identifier: string): Promise<EmployeeWithAuth | null> {
+  const byRegistryId = await findEmployeeByRegistryId(identifier.trim().toUpperCase());
+  if (byRegistryId) return byRegistryId;
+
+  return findEmployeeByName(identifier);
+}
+
 export async function findMasterAccount(): Promise<EmployeeWithAuth | null> {
   const supabase = getSupabaseClient();
   if (!supabase) throw new Error('Supabase não configurado.');

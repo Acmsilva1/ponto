@@ -10,7 +10,7 @@ interface LoginPageProps {
 
 export function LoginPage({ onLogin, apiStatus }: LoginPageProps) {
   const [tab, setTab] = useState<'colaborador' | 'gestor'>('colaborador');
-  const [registryId, setRegistryId] = useState('');
+  const [loginId, setLoginId] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [message, setMessage] = useState('');
@@ -18,7 +18,7 @@ export function LoginPage({ onLogin, apiStatus }: LoginPageProps) {
   const [recoveryBusy, setRecoveryBusy] = useState(false);
 
   useEffect(() => {
-    setRegistryId('');
+    setLoginId('');
     setPassword('');
     setShowPassword(false);
     setMessage('');
@@ -28,7 +28,7 @@ export function LoginPage({ onLogin, apiStatus }: LoginPageProps) {
     event.preventDefault();
     setBusy(true);
     try {
-      const result = await login({ registryId: registryId.trim(), password });
+      const result = await login({ registryId: loginId.trim(), password });
       await onLogin(result.session.employee, result.session.token);
       setMessage(result.requiresPasswordChange ? 'Troque sua senha no perfil.' : 'Login efetuado com sucesso.');
     } catch (error) {
@@ -39,14 +39,14 @@ export function LoginPage({ onLogin, apiStatus }: LoginPageProps) {
   }
 
   async function handleRecovery() {
-    if (!registryId.trim()) {
-      setMessage('Informe o registro antes de recuperar o acesso.');
+    if (!loginId.trim()) {
+      setMessage('Informe o nome ou registro antes de recuperar o acesso.');
       return;
     }
 
     setRecoveryBusy(true);
     try {
-      const result = await recoverPassword({ registryId: registryId.trim() });
+      const result = await recoverPassword({ registryId: loginId.trim() });
       setPassword(result.temporaryPassword);
       setShowPassword(false);
       setMessage(`Senha provisória gerada para ${result.employee.name}. Entre com ela e troque no perfil.`);
@@ -105,12 +105,12 @@ export function LoginPage({ onLogin, apiStatus }: LoginPageProps) {
           <form onSubmit={submitLogin} className="mt-6 space-y-4">
             <div>
               <label className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-400">
-                {tab === 'gestor' ? 'Registro do gestor master' : 'Registro do colaborador'}
+                {tab === 'gestor' ? 'Registro do gestor master' : 'Nome do colaborador'}
               </label>
               <input
-                value={registryId}
-                onChange={(e) => setRegistryId(e.target.value)}
-                placeholder={tab === 'gestor' ? 'GESTOR' : 'REG-12345'}
+                value={loginId}
+                onChange={(e) => setLoginId(e.target.value)}
+                placeholder={tab === 'gestor' ? 'GESTOR' : 'Nome completo'}
                 className="w-full rounded-[1.25rem] border border-white/10 bg-slate-950/70 px-4 py-3 text-sm text-slate-100 outline-none transition placeholder:text-slate-500 focus:border-indigo-400"
               />
             </div>

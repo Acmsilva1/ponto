@@ -11,7 +11,14 @@ import type {
 } from '../../../../shared/src/contracts.js';
 import { env } from '../../config/env.js';
 import { hashPassword, signSession, verifyPassword } from '../../lib/crypto.js';
-import { createEmployee, ensureMasterAccount, findEmployeeById, findEmployeeByRegistryId, logPasswordResetRequest, updatePassword } from './auth.repository.js';
+import {
+  createEmployee,
+  ensureMasterAccount,
+  findEmployeeById,
+  findEmployeeByLoginIdentifier,
+  logPasswordResetRequest,
+  updatePassword
+} from './auth.repository.js';
 
 function sanitizeEmployee(employee: Employee & { passwordHash?: string }): Employee {
   const { passwordHash: _passwordHash, ...safeEmployee } = employee;
@@ -40,8 +47,8 @@ async function issueSession(employee: Employee & { passwordHash?: string }): Pro
 }
 
 export async function login(input: LoginInput) {
-  const registryId = input.registryId.trim().toUpperCase();
-  const employee = await findEmployeeByRegistryId(registryId);
+  const identifier = input.registryId.trim();
+  const employee = await findEmployeeByLoginIdentifier(identifier);
   if (!employee) {
     throw new Error('Credenciais inválidas.');
   }
@@ -129,8 +136,8 @@ function generateTemporaryPassword() {
 }
 
 export async function recoverPassword(input: PasswordRecoveryInput): Promise<PasswordRecoveryResponse> {
-  const registryId = input.registryId.trim().toUpperCase();
-  const employee = await findEmployeeByRegistryId(registryId);
+  const identifier = input.registryId.trim();
+  const employee = await findEmployeeByLoginIdentifier(identifier);
   if (!employee) {
     throw new Error('Registro não encontrado.');
   }
