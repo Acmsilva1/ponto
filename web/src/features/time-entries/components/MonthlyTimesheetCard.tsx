@@ -5,6 +5,8 @@ import type { TimeEntry, TimeEntryType } from '@shared/contracts';
 interface MonthlyTimesheetCardProps {
   entries: TimeEntry[];
   dark?: boolean;
+  selectedMonth?: string;
+  onSelectedMonthChange?: (month: string) => void;
 }
 
 const typeLabel: Record<TimeEntryType, string> = {
@@ -75,9 +77,16 @@ function buildMonthOptions(reference = new Date()) {
   return options;
 }
 
-export function MonthlyTimesheetCard({ entries, dark = true }: MonthlyTimesheetCardProps) {
-  const [selectedMonth, setSelectedMonth] = useState(() => getBrasiliaMonthKey(new Date()));
+export function MonthlyTimesheetCard({
+  entries,
+  dark = true,
+  selectedMonth: controlledMonth,
+  onSelectedMonthChange
+}: MonthlyTimesheetCardProps) {
+  const [internalMonth, setInternalMonth] = useState(() => getBrasiliaMonthKey(new Date()));
   const monthOptions = useMemo(() => buildMonthOptions(), []);
+  const selectedMonth = controlledMonth ?? internalMonth;
+  const setSelectedMonth = onSelectedMonthChange || setInternalMonth;
 
   const monthEntries = useMemo(
     () =>

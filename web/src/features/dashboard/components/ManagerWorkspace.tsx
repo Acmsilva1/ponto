@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import type { EChartsOption } from 'echarts';
+import { UsersRound, X } from 'lucide-react';
 import type { DashboardSummary, Employee, Justification, TimeEntry } from '@shared/contracts';
 import { deleteEmployee, updateEmployee } from '../../employees/services/employeesService.js';
 import { registerCollaboratorByManager } from '../../auth/services/authService.js';
-import { TimeCardTable } from '../../time-entries/components/TimeCardTable.js';
+import { MonthlyTimesheetCard } from '../../time-entries/components/MonthlyTimesheetCard.js';
 import { EChartCard } from './EChartCard.js';
 
 interface ManagerWorkspaceProps {
@@ -23,6 +24,61 @@ function formatLabel(date: Date) {
 
 function dayKey(date: Date) {
   return date.toISOString().slice(0, 10);
+}
+
+function getBrasiliaDateParts(date: Date) {
+  const formatter = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/Sao_Paulo',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  });
+
+  const parts = formatter.formatToParts(date);
+  return {
+    year: parts.find((part) => part.type === 'year')?.value || '0000',
+    month: parts.find((part) => part.type === 'month')?.value || '00',
+    day: parts.find((part) => part.type === 'day')?.value || '00'
+  };
+}
+
+function getBrasiliaDateKey(date: Date) {
+  const { year, month, day } = getBrasiliaDateParts(date);
+  return `${year}-${month}-${day}`;
+}
+
+function getBrasiliaMonthKey(date: Date) {
+  return getBrasiliaDateKey(date).slice(0, 7);
+}
+
+function formatDuration(totalMinutes: number) {
+  const safeMinutes = Math.max(0, Math.round(totalMinutes));
+  const hours = Math.floor(safeMinutes / 60);
+  const minutes = safeMinutes % 60;
+  return `${String(hours).padStart(2, '0')}h${String(minutes).padStart(2, '0')}`;
+}
+
+function sumJourneyMinutes(entries: TimeEntry[]) {
+  const byDay = new Map<string, TimeEntry[]>();
+
+  for (const entry of entries) {
+    const dateKey = getBrasiliaDateKey(new Date(entry.timestamp));
+    const current = byDay.get(dateKey) || [];
+    current.push(entry);
+    byDay.set(dateKey, current);
+  }
+
+  let totalMinutes = 0;
+
+  for (const dayEntries of byDay.values()) {
+    const sorted = [...dayEntries].sort((left, right) => left.timestamp.localeCompare(right.timestamp));
+
+    for (let index = 0; index + 1 < sorted.length; index += 2) {
+      totalMinutes += (new Date(sorted[index + 1].timestamp).getTime() - new Date(sorted[index].timestamp).getTime()) / 60000;
+    }
+  }
+
+  return totalMinutes;
 }
 
 export function ManagerWorkspace({
@@ -48,6 +104,8 @@ export function ManagerWorkspace({
   const [editRole, setEditRole] = useState('');
   const [editRegistryId, setEditRegistryId] = useState('');
   const [employeeBusy, setEmployeeBusy] = useState(false);
+  const [showEmployeeDetailsModal, setShowEmployeeDetailsModal] = useState(false);
+  const [employeeMonth, setEmployeeMonth] = useState(() => getBrasiliaMonthKey(new Date()));
 
   useEffect(() => {
     setEditName(selectedEmployee.name || '');
@@ -56,6 +114,37 @@ export function ManagerWorkspace({
     setEditMode(false);
     setEmployeeFeedback('');
   }, [selectedEmployee.id, selectedEmployee.name, selectedEmployee.role, selectedEmployee.registryId]);
+
+  const selectedEmployeeEntries = useMemo(
+    () => timeEntries.filter((entry) => entry.employeeId === selectedEmployee.id),
+    [selectedEmployee.id, timeEntries]
+  );
+
+  const selectedEmployeeMonthEntries = useMemo(
+    () =>
+      selectedEmployeeEntries
+        .filter((entry) => getBrasiliaDateKey(new Date(entry.timestamp)).startsWith(employeeMonth))
+        .sort((left, right) => left.timestamp.localeCompare(right.timestamp)),
+    [employeeMonth, selectedEmployeeEntries]
+  );
+
+  const selectedEmployeeOfficialEntries = useMemo(
+    () => selectedEmployeeMonthEntries.filter((entry) => entry.journey === 'official'),
+    [selectedEmployeeMonthEntries]
+  );
+
+  const selectedEmployeeExtraEntries = useMemo(
+    () => selectedEmployeeMonthEntries.filter((entry) => entry.journey === 'extra'),
+    [selectedEmployeeMonthEntries]
+  );
+
+  const employeeSummary = useMemo(
+    () => ({
+      workedHours: formatDuration(sumJourneyMinutes(selectedEmployeeOfficialEntries)),
+      extraHours: formatDuration(sumJourneyMinutes(selectedEmployeeExtraEntries))
+    }),
+    [selectedEmployeeExtraEntries, selectedEmployeeOfficialEntries]
+  );
 
   const chartData = useMemo(() => {
     const collaboratorsOnly = employees.filter((item) => !item.isMaster);
@@ -271,6 +360,14 @@ export function ManagerWorkspace({
     }
   }
 
+  function openEmployeeDetails(employeeId: string) {
+    onSelectEmployee(employeeId);
+    setEmployeeMonth(getBrasiliaMonthKey(new Date()));
+    setShowEmployeeDetailsModal(true);
+    setEditMode(false);
+    setEmployeeFeedback('');
+  }
+
   return (
     <section className="space-y-6">
       <section className="rounded-[2rem] border border-white/10 bg-slate-950/80 p-6 shadow-[0_24px_80px_rgba(2,6,23,0.45)]">
@@ -343,8 +440,11 @@ export function ManagerWorkspace({
             <button
               type="button"
               onClick={() => setShowEmployeesModal(true)}
-              className="rounded-full border border-white/10 bg-white/[0.03] px-5 py-3 text-sm font-bold text-slate-100 transition hover:-translate-y-0.5 hover:bg-white/[0.06]"
+              className="inline-flex items-center gap-3 rounded-full border border-white/10 bg-white/[0.03] px-5 py-3 text-sm font-bold text-slate-100 transition hover:-translate-y-0.5 hover:bg-white/[0.06]"
             >
+              <span className="flex h-9 w-9 items-center justify-center rounded-full border border-cyan-400/20 bg-gradient-to-br from-indigo-500/20 to-cyan-500/20">
+                <UsersRound className="h-4 w-4 text-cyan-300" />
+              </span>
               Ver colaboradores
             </button>
           </div>
@@ -420,24 +520,34 @@ export function ManagerWorkspace({
 
       {showEmployeesModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/85 px-4 backdrop-blur-sm">
-          <div className="flex h-[82vh] w-full max-w-6xl flex-col overflow-hidden rounded-[2rem] border border-white/10 bg-slate-950 shadow-[0_30px_120px_rgba(2,6,23,0.6)]">
+          <div className="flex h-[82vh] w-full max-w-5xl flex-col overflow-hidden rounded-[2rem] border border-white/10 bg-slate-950 shadow-[0_30px_120px_rgba(2,6,23,0.6)]">
             <div className="flex items-center justify-between gap-4 border-b border-white/10 px-6 py-5">
               <div>
                 <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-indigo-300/80">Colaboradores</p>
-                <h3 className="mt-2 text-2xl font-black text-white">Lista e edição</h3>
+                <h3 className="mt-2 text-2xl font-black text-white">Selecione um colaborador</h3>
               </div>
               <button
                 type="button"
-                onClick={() => setShowEmployeesModal(false)}
+                onClick={() => {
+                  setShowEmployeesModal(false);
+                  setShowEmployeeDetailsModal(false);
+                  setEditMode(false);
+                }}
                 className="rounded-2xl border border-white/10 bg-white/[0.03] px-3 py-2 text-sm text-slate-300 transition hover:bg-white/[0.06]"
               >
                 Fechar
               </button>
             </div>
 
-            <div className="grid min-h-0 flex-1 gap-0 lg:grid-cols-[0.42fr_0.58fr]">
+            <div className="grid min-h-0 flex-1 gap-0 lg:grid-cols-[0.44fr_0.56fr]">
               <aside className="min-h-0 overflow-y-auto border-b border-white/10 p-4 lg:border-b-0 lg:border-r">
-                <div className="space-y-2">
+                <div className="rounded-[1.5rem] border border-white/10 bg-white/[0.03] p-4">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-400">Lista</p>
+                  <h4 className="mt-2 text-lg font-black text-white">Nomes dos colaboradores</h4>
+                  <p className="mt-2 text-sm text-slate-400">Clique em um nome para abrir os dados mensais.</p>
+                </div>
+
+                <div className="mt-4 space-y-2">
                   {chartData.collaboratorsOnly.length === 0 ? (
                     <div className="rounded-[1.25rem] border border-dashed border-white/10 bg-white/[0.03] p-6 text-center text-sm text-slate-400">
                       Nenhum colaborador encontrado.
@@ -449,20 +559,14 @@ export function ManagerWorkspace({
                         <button
                           key={item.id}
                           type="button"
-                          onClick={() => onSelectEmployee(item.id)}
+                          onClick={() => openEmployeeDetails(item.id)}
                           className={`w-full rounded-[1.25rem] border px-4 py-4 text-left transition ${
                             active
                               ? 'border-indigo-400/40 bg-indigo-500/15'
                               : 'border-white/10 bg-white/[0.03] hover:border-white/20 hover:bg-white/[0.06]'
                           }`}
                         >
-                          <div className="flex items-center justify-between gap-3">
-                            <div>
-                              <p className="text-sm font-semibold text-white">{item.name}</p>
-                              <p className="mt-1 text-xs text-slate-400">{item.role}</p>
-                            </div>
-                            <span className="text-[10px] uppercase tracking-[0.18em] text-slate-400">{item.registryId}</span>
-                          </div>
+                          <p className="text-sm font-semibold text-white">{item.name}</p>
                         </button>
                       );
                     })
@@ -470,93 +574,130 @@ export function ManagerWorkspace({
                 </div>
               </aside>
 
-              <section className="min-h-0 overflow-y-auto p-6">
-                <div className="rounded-[1.5rem] border border-white/10 bg-white/[0.03] p-5">
-                  <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-                    <div>
-                      <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-400">Colaborador selecionado</p>
-                      <h4 className="mt-2 text-3xl font-black text-white">{selectedEmployee.name}</h4>
-                      <p className="mt-2 text-sm text-slate-400">
-                        Matrícula: {selectedEmployee.registryId}
-                      </p>
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      <button
-                        type="button"
-                        onClick={() => setEditMode((current) => !current)}
-                        className="rounded-full border border-white/10 bg-white/[0.03] px-4 py-2 text-sm font-semibold text-slate-100 transition hover:bg-white/[0.06]"
-                      >
-                        {editMode ? 'Fechar edição' : 'Editar'}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={handleDeleteEmployee}
-                        disabled={employeeBusy || selectedEmployee.isMaster}
-                        className="rounded-full border border-rose-400/20 bg-rose-500/10 px-4 py-2 text-sm font-semibold text-rose-100 transition hover:bg-rose-500/20 disabled:cursor-not-allowed disabled:opacity-50"
-                      >
-                        Excluir
-                      </button>
+              <section className="hidden min-h-0 items-center justify-center border-l border-white/10 bg-white/[0.02] p-6 lg:flex">
+                <div className="max-w-sm rounded-[1.5rem] border border-dashed border-white/10 bg-slate-950/70 p-6 text-center">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-400">Detalhe</p>
+                  <h4 className="mt-2 text-xl font-black text-white">Abra um colaborador</h4>
+                  <p className="mt-3 text-sm leading-6 text-slate-400">
+                    O submodal vai exibir os dados do colaborador, o resumo mensal e todas as batidas do mês selecionado.
+                  </p>
+                </div>
+              </section>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showEmployeeDetailsModal && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/90 px-4 backdrop-blur-md">
+          <div className="flex h-[90vh] w-full max-w-7xl flex-col overflow-hidden rounded-[2rem] border border-white/10 bg-slate-950 shadow-[0_30px_120px_rgba(2,6,23,0.7)]">
+            <div className="border-b border-white/10 bg-gradient-to-r from-indigo-500/10 via-transparent to-cyan-500/10 px-6 py-5">
+              <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                <div className="flex items-start gap-4">
+                  <div
+                    className={`flex h-16 w-16 items-center justify-center rounded-[1.35rem] border border-white/10 text-xl font-black text-white ${selectedEmployee.avatarColor}`}
+                  >
+                    {selectedEmployee.name.slice(0, 1).toUpperCase()}
+                  </div>
+                  <div>
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-indigo-300/80">Detalhe do colaborador</p>
+                    <h3 className="mt-2 text-3xl font-black text-white">{selectedEmployee.name}</h3>
+                    <p className="mt-2 text-sm text-slate-400">Matrícula: {selectedEmployee.registryId}</p>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      <span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-200">
+                        {selectedEmployee.role}
+                      </span>
+                      <span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-200">
+                        {selectedEmployee.department}
+                      </span>
+                      <span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-200">
+                        {selectedEmployee.accessRole}
+                      </span>
                     </div>
                   </div>
+                </div>
 
-                  <div className="mt-6 grid gap-3 sm:grid-cols-2">
-                    <div className="rounded-[1.25rem] border border-white/10 bg-slate-950/70 p-4">
-                      <p className="text-[10px] uppercase tracking-[0.18em] text-slate-400">Função</p>
-                      <p className="mt-1 text-sm font-semibold text-white">{selectedEmployee.role}</p>
-                    </div>
-                    <div className="rounded-[1.25rem] border border-white/10 bg-slate-950/70 p-4">
-                      <p className="text-[10px] uppercase tracking-[0.18em] text-slate-400">Setor</p>
-                      <p className="mt-1 text-sm font-semibold text-white">{selectedEmployee.department}</p>
-                    </div>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setEditMode((current) => !current)}
+                    className="rounded-full border border-white/10 bg-white/[0.03] px-4 py-2 text-sm font-semibold text-slate-100 transition hover:bg-white/[0.06]"
+                  >
+                    {editMode ? 'Fechar edição' : 'Editar dados'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowEmployeeDetailsModal(false);
+                      setEditMode(false);
+                    }}
+                    className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.03] px-4 py-2 text-sm font-semibold text-slate-100 transition hover:bg-white/[0.06]"
+                  >
+                    <X className="h-4 w-4" />
+                    Fechar
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div className="min-h-0 flex-1 overflow-y-auto p-6">
+              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                <div className="rounded-[1.5rem] border border-white/10 bg-white/[0.03] p-4">
+                  <p className="text-[10px] uppercase tracking-[0.18em] text-slate-400">Horas trabalhadas</p>
+                  <p className="mt-2 text-3xl font-black text-white">{employeeSummary.workedHours}</p>
+                </div>
+                <div className="rounded-[1.5rem] border border-amber-400/20 bg-amber-500/10 p-4">
+                  <p className="text-[10px] uppercase tracking-[0.18em] text-amber-100/80">Horas extras</p>
+                  <p className="mt-2 text-3xl font-black text-amber-50">{employeeSummary.extraHours}</p>
+                </div>
+                <div className="rounded-[1.5rem] border border-white/10 bg-white/[0.03] p-4">
+                  <p className="text-[10px] uppercase tracking-[0.18em] text-slate-400">Batidas no mês</p>
+                  <p className="mt-2 text-3xl font-black text-white">{selectedEmployeeMonthEntries.length}</p>
+                </div>
+              </div>
+
+              {editMode && (
+                <div className="mt-6 rounded-[1.5rem] border border-indigo-400/20 bg-indigo-500/10 p-5">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-indigo-100/80">Editar colaborador</p>
+                  <div className="mt-4 grid gap-3 md:grid-cols-3">
+                    <input
+                      value={editName}
+                      onChange={(e) => setEditName(e.target.value)}
+                      placeholder="Nome completo"
+                      className="w-full rounded-[1.25rem] border border-white/10 bg-slate-950/70 px-4 py-3 text-sm text-slate-100 outline-none transition placeholder:text-slate-500 focus:border-indigo-400"
+                    />
+                    <input
+                      value={editRole}
+                      onChange={(e) => setEditRole(e.target.value)}
+                      placeholder="Função"
+                      className="w-full rounded-[1.25rem] border border-white/10 bg-slate-950/70 px-4 py-3 text-sm text-slate-100 outline-none transition placeholder:text-slate-500 focus:border-indigo-400"
+                    />
+                    <input
+                      value={editRegistryId}
+                      onChange={(e) => setEditRegistryId(e.target.value)}
+                      placeholder="Matrícula"
+                      className="w-full rounded-[1.25rem] border border-white/10 bg-slate-950/70 px-4 py-3 text-sm text-slate-100 outline-none transition placeholder:text-slate-500 focus:border-indigo-400"
+                    />
                   </div>
 
-                  <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                    <div className="rounded-[1.25rem] border border-white/10 bg-slate-950/70 p-4">
-                      <p className="text-[10px] uppercase tracking-[0.18em] text-slate-400">Perfil</p>
-                      <p className="mt-1 text-sm font-semibold text-white">{selectedEmployee.accessRole}</p>
-                    </div>
-                    <div className="rounded-[1.25rem] border border-white/10 bg-slate-950/70 p-4">
-                      <p className="text-[10px] uppercase tracking-[0.18em] text-slate-400">Troca obrigatória</p>
-                      <p className="mt-1 text-sm font-semibold text-white">{selectedEmployee.mustChangePassword ? 'Sim' : 'Não'}</p>
-                    </div>
+                  <div className="mt-4 flex gap-3">
+                    <button
+                      type="button"
+                      onClick={handleSaveEmployee}
+                      disabled={employeeBusy}
+                      className="rounded-full bg-white px-5 py-3 text-sm font-bold text-slate-950 transition hover:bg-slate-200 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      {employeeBusy ? 'Salvando...' : 'Salvar alterações'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleDeleteEmployee}
+                      disabled={employeeBusy || selectedEmployee.isMaster}
+                      className="rounded-full border border-rose-400/20 bg-rose-500/10 px-5 py-3 text-sm font-bold text-rose-100 transition hover:bg-rose-500/20 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      Excluir
+                    </button>
                   </div>
-
-                  {editMode && (
-                    <div className="mt-6 rounded-[1.5rem] border border-indigo-400/20 bg-indigo-500/10 p-5">
-                      <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-indigo-100/80">Editar colaborador</p>
-                      <div className="mt-4 grid gap-3">
-                        <input
-                          value={editName}
-                          onChange={(e) => setEditName(e.target.value)}
-                          placeholder="Nome completo"
-                          className="w-full rounded-[1.25rem] border border-white/10 bg-slate-950/70 px-4 py-3 text-sm text-slate-100 outline-none transition placeholder:text-slate-500 focus:border-indigo-400"
-                        />
-                        <input
-                          value={editRole}
-                          onChange={(e) => setEditRole(e.target.value)}
-                          placeholder="Função"
-                          className="w-full rounded-[1.25rem] border border-white/10 bg-slate-950/70 px-4 py-3 text-sm text-slate-100 outline-none transition placeholder:text-slate-500 focus:border-indigo-400"
-                        />
-                        <input
-                          value={editRegistryId}
-                          onChange={(e) => setEditRegistryId(e.target.value)}
-                          placeholder="Matrícula"
-                          className="w-full rounded-[1.25rem] border border-white/10 bg-slate-950/70 px-4 py-3 text-sm text-slate-100 outline-none transition placeholder:text-slate-500 focus:border-indigo-400"
-                        />
-                      </div>
-
-                      <div className="mt-4 flex gap-3">
-                        <button
-                          type="button"
-                          onClick={handleSaveEmployee}
-                          disabled={employeeBusy}
-                          className="rounded-full bg-white px-5 py-3 text-sm font-bold text-slate-950 transition hover:bg-slate-200 disabled:cursor-not-allowed disabled:opacity-60"
-                        >
-                          {employeeBusy ? 'Salvando...' : 'Salvar alterações'}
-                        </button>
-                      </div>
-                    </div>
-                  )}
 
                   {employeeFeedback && (
                     <div className="mt-4 rounded-[1.25rem] border border-white/10 bg-white/[0.05] p-4 text-sm text-slate-100">
@@ -564,7 +705,15 @@ export function ManagerWorkspace({
                     </div>
                   )}
                 </div>
-              </section>
+              )}
+
+              <div className="mt-6">
+                <MonthlyTimesheetCard
+                  entries={selectedEmployeeEntries}
+                  selectedMonth={employeeMonth}
+                  onSelectedMonthChange={setEmployeeMonth}
+                />
+              </div>
             </div>
           </div>
         </div>
